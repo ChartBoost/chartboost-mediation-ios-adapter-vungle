@@ -108,10 +108,8 @@ final class VungleAdapter: NSObject, PartnerAdapter, VungleSDKDelegate, VungleSD
     /// - parameter delegate: The delegate that will receive ad life-cycle notifications.
     func makeAd(request: PartnerAdLoadRequest, delegate: PartnerAdDelegate) throws -> PartnerAd {
         switch request.format {
-        case .interstitial:
-            return VungleAdapterInterstitialAd(adapter: self, request: request, delegate: delegate)
-        case .rewarded:
-            return VungleAdapterRewardedAd(adapter: self, request: request, delegate: delegate)
+        case .interstitial, .rewarded:
+            return VungleAdapterFullscreenAd(adapter: self, request: request, delegate: delegate)
         case .banner:
             return VungleAdapterBannerAd(adapter: self, request: request, delegate: delegate)
         }

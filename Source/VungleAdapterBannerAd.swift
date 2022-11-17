@@ -9,9 +9,10 @@ import Foundation
 import HeliumSdk
 import VungleSDK
 
-final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd, VungleSDKHBDelegate, VungleSDKDelegate {
+/// Helium Vungle banner ad adapter.
+final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd, VungleRouterDelegate {
     var inlineView: UIView?
-
+    
     /// Loads an ad.
     /// - parameter viewController: The view controller on which the ad will be presented on. Needed on load for some banners.
     /// - parameter completion: Closure to be performed once the ad has been loaded.
@@ -21,21 +22,12 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd, VungleSDKHBDelega
         loadCompletion = completion
         
         let bannerSize = getVungleBannerSize(size: request.size)
-        inlineView = UIView(frame: getFrameSize(size: bannerSize))
         
-        if (VungleAdapter.sdk.isAdCached(forPlacementID: request.partnerPlacement, adMarkup: request.adm, with: bannerSize) == true) {
-            loadCompletion?(.success([:])) ?? log(.loadResultIgnored)
-            loadCompletion = nil
-            
-            return
+        DispatchQueue.main.async {
+            self.inlineView = UIView(frame: self.getFrameSize(size: bannerSize))
         }
         
-        do {
-            try VungleAdapter.sdk.loadPlacement(withID: request.partnerPlacement, adMarkup: request.adm, with: bannerSize)
-        } catch {
-            loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
-            loadCompletion = nil
-        }
+        VungleRouter.requestAd(request: request, delegate: self, bannerSize: bannerSize)
     }
     
     /// Shows a loaded ad.
@@ -73,134 +65,72 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd, VungleSDKHBDelega
         }
     }
     
-    // MARK: - VungleSDKDelegate
-    
-    internal func vungleAdPlayabilityUpdate(_ isAdPlayable: Bool, placementID: String?, error: Error?) {
-        /// Banners are shown upon load
-        if (request.format == .banner) {
+    func vungleAdDidLoad() {
+        DispatchQueue.main.async {
             do {
                 if let inlineView = self.inlineView {
-                    try VungleAdapter.sdk.addAdView(to: inlineView, withOptions: [:], placementID: request.partnerPlacement)
+                    try VungleSDK.shared().addAdView(to: inlineView, withOptions: [:], placementID: self.request.partnerPlacement)
                     
-                    log(.loadSucceeded)
-                    loadCompletion?(.success([:])) ?? log(.loadResultIgnored)
+                    self.log(.loadSucceeded)
+                    self.loadCompletion?(.success([:])) ?? self.log(.loadResultIgnored)
                 } else {
                     let error = self.error(.loadFailure, description: "Vungle inline View is nil.")
-                    log(.loadFailed(error))
-                    loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
+                    self.log(.loadFailed(error))
+                    self.loadCompletion?(.failure(error)) ?? self.log(.loadResultIgnored)
                 }
             } catch {
-                log(.loadFailed(error))
-                loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
+                self.log(.loadFailed(error))
+                self.loadCompletion?(.failure(error)) ?? self.log(.loadResultIgnored)
             }
-        } else {
-            loadCompletion?(isAdPlayable
-                            ? .success([:])
-                            : .failure(error ?? self.error(.loadFailure))) ?? log(.loadResultIgnored)
+            
+            self.loadCompletion = nil
+        }
+    }
+    
+    func vungleAdDidFailToLoad(error: Error?) {
+        if let error = error {
+            log(.loadFailed(error))
+            loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
         }
         
         loadCompletion = nil
     }
     
-    internal func vungleWillShowAd(forPlacementID placementID: String?) {
-        log(.custom("vungleWillShowAdForPlacementID \(String(describing: placementID))"))
+    func vungleAdWillShow(placementID: String?) {
+        // NO-OP for banners
     }
     
-    internal func vungleDidShowAd(forPlacementID placementID: String?) {
-        log(.showSucceeded)
-        showCompletion?(.success([:])) ?? log(.showResultIgnored)
-        showCompletion = nil
+    func vungleAdDidShow() {
+        // NO-OP for banners
     }
     
-    internal func vungleAdViewed(forPlacement placementID: String) {
+    func vungleAdDidFailToShow(error: Error?) {
+        // NO-OP for banners
+    }
+    
+    func vungleAdViewed() {
         log(.didTrackImpression)
         delegate?.didTrackImpression(self, details: [:]) ?? log(.delegateUnavailable)
     }
     
-    internal func vungleWillCloseAd(forPlacementID placementID: String) {
-        log("vungleWillCloseAdForPlacementID \(placementID)")
-    }
-    
-    internal func vungleDidCloseAd(forPlacementID placementID: String) {
-        log(.didDismiss(error: nil))
-        delegate?.didDismiss(self, details: [:], error: nil) ?? log(.delegateUnavailable)
-    }
-    
-    internal func vungleTrackClick(forPlacementID placementID: String?) {
+    func vungleAdDidClick() {
         log(.didClick(error: nil))
         delegate?.didClick(self, details: [:]) ?? log(.delegateUnavailable)
     }
     
-    internal func vungleWillLeaveApplication(forPlacementID placementID: String?) {
-        log("vungleWillLeaveApplicationForPlacementID \(String(describing: placementID))")
+    func vungleAdWillLeaveApplication(placementID: String?) {
+        // NO-OP for banners
     }
     
-    internal func vungleRewardUser(forPlacementID placementID: String?) {
-        log(.didReward)
-        delegate?.didReward(self, details: [:]) ?? log(.delegateUnavailable)
+    func vungleAdWillClose(placementID: String?) {
+        // NO-OP for banners
     }
     
-    // MARK: - VungleSDKHBDelegate
-    
-    internal func vungleAdPlayabilityUpdate(_ isAdPlayable: Bool, placementID: String?, adMarkup: String?, error: Error?) {
-        /// Banners are shown upon load
-        if (request.format == .banner) {
-            do {
-                if let inlineView = self.inlineView {
-                    try VungleAdapter.sdk.addAdView(to: inlineView, withOptions: [:], placementID: request.partnerPlacement)
-                    loadCompletion?(.success([:]))
-                } else {
-                    loadCompletion?(.failure(self.error(.loadFailure, description: "Vungle inline View is nil.")))
-                }
-            } catch {
-                loadCompletion?(.failure(error))
-            }
-        } else {
-            loadCompletion?(isAdPlayable
-                            ? .success([:])
-                            : .failure(error ?? self.error(.loadFailure))) ?? log(.loadResultIgnored)
-        }
-        
-        loadCompletion = nil
+    func vungleAdDidClose() {
+        // NO-OP for banners
     }
     
-    internal func vungleWillShowAd(forPlacementID placementID: String?, adMarkup: String?) {
-        log("vungleWillShowAdForPlacementID \(String(describing: placementID))")
-    }
-    
-    internal func vungleDidShowAd(forPlacementID placementID: String?, adMarkup: String?) {
-        showCompletion?(.success([:])) ?? log(.showResultIgnored)
-        showCompletion = nil
-    }
-    
-    internal func vungleAdViewed(forPlacementID placementID: String?, adMarkup: String?) {
-        log("vungleAdViewedForPlacementID \(String(describing: placementID))")
-    }
-    
-    internal func vungleWillCloseAd(forPlacementID placementID: String?, adMarkup: String?) {
-        log("vungleWillCloseAdForPlacementID \(String(describing: placementID))")
-    }
-    
-    internal func vungleDidCloseAd(forPlacementID placementID: String?, adMarkup: String?) {
-        log(.didDismiss(error: nil))
-        delegate?.didDismiss(self, details: [:], error: nil) ?? log(.delegateUnavailable)
-    }
-    
-    internal func vungleTrackClick(forPlacementID placementID: String?, adMarkup: String?) {
-        log(.didClick(error: nil))
-        delegate?.didClick(self, details: [:]) ?? log(.delegateUnavailable)
-    }
-    
-    internal func vungleWillLeaveApplication(forPlacementID placementID: String?, adMarkup: String?) {
-        log("vungleWillLeaveApplicationForPlacementID \(String(describing: placementID))")
-    }
-    
-    internal func vungleRewardUser(forPlacementID placementID: String?, adMarkup: String?) {
-        log(.didReward)
-        delegate?.didReward(self, details: [:]) ?? log(.delegateUnavailable)
-    }
-    
-    internal func invalidateObjects(forPlacementID placementID: String?) {
-        log("invalidateObjectsForPlacementID \(String(describing: placementID))")
+    func vungleAdDidReward() {
+        // NO-OP for banners
     }
 }
