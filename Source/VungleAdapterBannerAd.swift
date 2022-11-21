@@ -82,6 +82,11 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
 extension VungleAdapterBannerAd {
     
     func vungleAdPlayabilityUpdate(_ isAdPlayable: Bool, placementID: String?, adMarkup: String?, error partnerError: Error?) {
+        // Vungle will call this method several times, we only care about the first one to know if the load succeeded or not.
+        guard loadCompletion != nil else {
+            log(.delegateCallIgnored)
+            return
+        }
         if isAdPlayable {
             // Report load success
             DispatchQueue.main.async { [self] in
