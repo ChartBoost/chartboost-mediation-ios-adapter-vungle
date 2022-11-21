@@ -7,9 +7,10 @@
 
 import Foundation
 import HeliumSdk
+import VungleSDK
 
 /// Base class for Helium Vungle adapter ads.
-class VungleAdapterAd: NSObject {
+class VungleAdapterAd: NSObject, VungleSDKHBDelegate {
 
     /// The partner adapter that created this ad.
     let adapter: PartnerAdapter

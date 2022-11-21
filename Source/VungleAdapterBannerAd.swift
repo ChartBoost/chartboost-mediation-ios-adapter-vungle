@@ -9,9 +9,12 @@ import Foundation
 import HeliumSdk
 import VungleSDK
 
-/// Helium Vungle banner ad adapter.
-final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd, VungleRouterDelegate {
-    var inlineView: UIView?
+/// Helium Vungle adapter banner ad.
+final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
+    
+    /// The partner ad view to display inline. E.g. a banner view.
+    /// Should be nil for full-screen ads.
+    lazy var inlineView: UIView? = UIView()
     
     /// Loads an ad.
     /// - parameter viewController: The view controller on which the ad will be presented on. Needed on load for some banners.
@@ -21,13 +24,23 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd, VungleRouterDeleg
         
         loadCompletion = completion
         
-        let bannerSize = getVungleBannerSize(size: request.size)
+        let bannerSize = vungleBannerSize(for: request.size)
         
-        DispatchQueue.main.async {
-            self.inlineView = UIView(frame: self.getFrameSize(size: bannerSize))
+        // If ad already loaded succeed immediately
+        guard !VungleSDK.shared().isAdCached(forPlacementID: request.partnerPlacement, adMarkup: request.adm, with: bannerSize) else {
+            log(.loadSucceeded)
+            completion(.success([:]))
+            return
         }
         
-        VungleRouter.requestAd(request: request, delegate: self, bannerSize: bannerSize)
+        // Start loading
+        do {
+            try VungleSDK.shared().loadPlacement(withID: request.partnerPlacement, adMarkup: request.adm, with: bannerSize)
+        } catch {
+            log(.loadFailed(error))
+            completion(.failure(error))
+            loadCompletion = nil
+        }
     }
     
     /// Shows a loaded ad.
@@ -41,7 +54,7 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd, VungleRouterDeleg
     /// Map Helium's banner sizes to the Vungle SDK's supported sizes.
     /// - Parameter size: The Helium's banner size.
     /// - Returns: The corresponding Vungle banner size.
-    func getVungleBannerSize(size: CGSize?) -> VungleAdSize {
+    private func vungleBannerSize(for size: CGSize?) -> VungleAdSize {
         let height = size?.height ?? 50
         
         switch height {
@@ -54,83 +67,89 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd, VungleRouterDeleg
         }
     }
     
-    /// Get a CGRect for the container UIView for the given Vungle banner size.
+    /// Get a CGSize corresponding to the given Vungle banner size.
     /// - Parameter size: The Vungle banner size.
-    /// - Returns: The corresponding CGRect.
-    func getFrameSize(size: VungleAdSize) -> CGRect {
-        if (size == .banner) {
-            return CGRect(x: 0, y: 0, width: 320, height: 50)
-        } else {
-            return CGRect(x: 0, y: 0, width: 728, height: 90)
-        }
+    /// - Returns: The corresponding CGSize.
+    private func cgSize(for size: VungleAdSize) -> CGSize {
+        size == .banner
+            ? CGSize(width: 320, height: 50)
+            : CGSize(width: 728, height: 90)
     }
+}
+
+// MARK: - VungleSDKHBDelegate
+
+extension VungleAdapterBannerAd {
     
-    func vungleAdDidLoad() {
-        DispatchQueue.main.async {
-            do {
-                if let inlineView = self.inlineView {
-                    try VungleSDK.shared().addAdView(to: inlineView, withOptions: [:], placementID: self.request.partnerPlacement)
-                    
-                    self.log(.loadSucceeded)
-                    self.loadCompletion?(.success([:])) ?? self.log(.loadResultIgnored)
-                } else {
-                    let error = self.error(.loadFailure, description: "Vungle inline View is nil.")
-                    self.log(.loadFailed(error))
-                    self.loadCompletion?(.failure(error)) ?? self.log(.loadResultIgnored)
+    func vungleAdPlayabilityUpdate(_ isAdPlayable: Bool, placementID: String?, adMarkup: String?, error partnerError: Error?) {
+        if isAdPlayable {
+            // Report load success
+            DispatchQueue.main.async { [self] in
+                do {
+                    if let inlineView = inlineView {
+                        // Set the frame for the container.
+                        inlineView.frame = CGRect(origin: .zero, size: cgSize(for: vungleBannerSize(for: request.size)))
+                        // Attach vungle view to the inlineView container.
+                        try VungleSDK.shared().addAdView(to: inlineView, withOptions: [:], placementID: request.partnerPlacement)
+                        log(.loadSucceeded)
+                        loadCompletion?(.success([:])) ?? log(.loadResultIgnored)
+                    } else {
+                        // Fail if inlineView container is unavailable. This should never happen since it is set on load.
+                        let error = error(.loadFailure, description: "Vungle adapter inlineView is nil.", error: partnerError)
+                        log(.loadFailed(error))
+                        loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
+                    }
+                } catch {
+                    // Fail to attach vungle view to inlineView container.
+                    let error = self.error(.loadFailure, error: error)
+                    log(.loadFailed(error))
+                    loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
                 }
-            } catch {
-                self.log(.loadFailed(error))
-                self.loadCompletion?(.failure(error)) ?? self.log(.loadResultIgnored)
+                
+                loadCompletion = nil
             }
-            
-            self.loadCompletion = nil
-        }
-    }
-    
-    func vungleAdDidFailToLoad(error: Error?) {
-        if let error = error {
+        } else {
+            // Report load failure
+            let error = error(.loadFailure, error: partnerError)
             log(.loadFailed(error))
             loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
+            loadCompletion = nil
         }
-        
-        loadCompletion = nil
     }
     
-    func vungleAdWillShow(placementID: String?) {
-        // NO-OP for banners
+    func vungleWillShowAd(forPlacementID placementID: String?, adMarkup: String?) {
+        log(.delegateCallIgnored)
     }
     
-    func vungleAdDidShow() {
-        // NO-OP for banners
+    func vungleDidShowAd(forPlacementID placementID: String?, adMarkup: String?) {
+        log(.delegateCallIgnored)
     }
     
-    func vungleAdDidFailToShow(error: Error?) {
-        // NO-OP for banners
-    }
-    
-    func vungleAdViewed() {
+    func vungleAdViewed(forPlacementID placementID: String?, adMarkup: String?) {
+        // Report impression tracked
         log(.didTrackImpression)
         delegate?.didTrackImpression(self, details: [:]) ?? log(.delegateUnavailable)
     }
     
-    func vungleAdDidClick() {
+    func vungleTrackClick(forPlacementID placementID: String?, adMarkup: String?) {
+        // Report click
         log(.didClick(error: nil))
         delegate?.didClick(self, details: [:]) ?? log(.delegateUnavailable)
     }
     
-    func vungleAdWillLeaveApplication(placementID: String?) {
-        // NO-OP for banners
+    func vungleWillLeaveApplication(forPlacementID placementID: String?, adMarkup: String?) {
+        log(.delegateCallIgnored)
     }
     
-    func vungleAdWillClose(placementID: String?) {
-        // NO-OP for banners
+    func vungleWillCloseAd(forPlacementID placementID: String?, adMarkup: String?) {
+        log(.delegateCallIgnored)
     }
     
-    func vungleAdDidClose() {
-        // NO-OP for banners
+    func vungleDidCloseAd(forPlacementID placementID: String?, adMarkup: String?) {
+        log(.delegateCallIgnored)
     }
     
-    func vungleAdDidReward() {
-        // NO-OP for banners
+    func vungleRewardUser(forPlacementID placementID: String?, adMarkup: String?) {
+        log(.delegateCallIgnored)
     }
 }

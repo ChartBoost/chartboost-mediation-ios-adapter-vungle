@@ -10,7 +10,7 @@ import HeliumSdk
 import VungleSDK
 
 /// The Helium Vungle adapter.
-final class VungleAdapter: NSObject, PartnerAdapter, VungleSDKDelegate, VungleSDKHBDelegate {
+final class VungleAdapter: PartnerAdapter {
     
     /// The version of the partner SDK.
     let partnerSDKVersion = VungleSDKVersion
@@ -18,21 +18,22 @@ final class VungleAdapter: NSObject, PartnerAdapter, VungleSDKDelegate, VungleSD
     /// The version of the adapter.
     /// It should have 6 digits separated by periods, where the first digit is Helium SDK's major version, the last digit is the adapter's build version, and intermediate digits are the partner SDK's version.
     /// Format: `"<Helium major version>.<Partner major version>.<Partner minor version>.<Partner patch version>.<Partner build version>.<Adapter build version>"`.
-    let adapterVersion = ""
+    let adapterVersion = "4.6.11.0.0"
     
     /// The partner's unique identifier.
     let partnerIdentifier = "vungle"
     
     /// The human-friendly partner name.
     let partnerDisplayName = "Vungle"
-    
-    static var sdk: VungleSDK { .shared() }
-    
+        
     /// The completion handler to notify Helium of partner setup completion result.
-    var setUpCompletion: ((Error?) -> Void)?
+    private var setUpCompletion: ((Error?) -> Void)?
     
     /// Ad storage managed by Helium SDK.
-    private let storage: PartnerAdapterStorage
+    let storage: PartnerAdapterStorage
+    
+    /// A router that forwards Vungle delegate calls to the corresponding `PartnerAd` instances.
+    private var router: VungleAdapterRouter?
     
     /// The designated initializer for the adapter.
     /// Helium SDK will use this constructor to create instances of conforming types.
@@ -48,8 +49,8 @@ final class VungleAdapter: NSObject, PartnerAdapter, VungleSDKDelegate, VungleSD
     func setUp(with configuration: PartnerConfiguration, completion: @escaping (Error?) -> Void) {
         log(.setUpStarted)
         
-        guard let appId = configuration.credentials[String.appIDKey] as? String, !appId.isEmpty else {
-            let error = self.error(.missingSetUpParameter(key: String.appIDKey))
+        guard let appId = configuration.credentials[.appIDKey] as? String, !appId.isEmpty else {
+            let error = self.error(.missingSetUpParameter(key: .appIDKey))
             self.log(.setUpFailed(error))
             
             completion(error)
@@ -57,21 +58,19 @@ final class VungleAdapter: NSObject, PartnerAdapter, VungleSDKDelegate, VungleSD
             return
         }
         
-        Self.sdk.delegate = self
-        Self.sdk.sdkHBDelegate = self
+        // Vungle provides one single delegate for all ads.
+        // VungleAdapterRouter implements these delegate protocols and forwards calls to the corresponding partner ad instances.
+        let router = VungleAdapterRouter(adapter: self)
+        self.router = router    // keep the router instance alive
+        VungleSDK.shared().delegate = router
+        VungleSDK.shared().sdkHBDelegate = router
         
-        setUpCompletion = { [weak self] error in
-            self?.log(error.map { .setUpFailed($0) } ?? .setUpSucceded)
-            self?.setUpCompletion = nil
-            
-            completion(error)
-        }
+        setUpCompletion = completion
         
         do {
-            try Self.sdk.start(withAppId: appId)
-        } catch let error as NSError {
-            self.log(.setUpFailed(error))
-            completion(error)
+            try VungleSDK.shared().start(withAppId: appId)
+        } catch {
+            vungleSDKFailedToInitializeWithError(error)
         }
     }
     
@@ -114,18 +113,25 @@ final class VungleAdapter: NSObject, PartnerAdapter, VungleSDKDelegate, VungleSD
             return VungleAdapterBannerAd(adapter: self, request: request, delegate: delegate)
         }
     }
+}
+
+// MARK: - VungleSDKDelegate
+
+extension VungleAdapter {
     
-    // MARK: - VungleSDKDelegate
-    
-    /// Called when the VungleSDK has successfully initialized.
-    internal func vungleSDKDidInitialize() {
+    /// VungleSDK initialization success forwarded by router.
+    func vungleSDKDidInitialize() {
+        log(.setUpSucceded)
         setUpCompletion?(nil)
+        setUpCompletion = nil
     }
     
-    /// Called when the Vungle SDK has failed to initialize.
-    /// - Parameter error: An error object containing information about the init failure.
-    private func vungleSDKFailedToInitializeWithError(error: NSError) {
+    /// VungleSDK initialization failure forwarded by router.
+    func vungleSDKFailedToInitializeWithError(_ partnerError: Error) {
+        let error = error(.setUpFailure, error: partnerError)
+        log(.setUpFailed(error))
         setUpCompletion?(error)
+        setUpCompletion = nil
     }
 }
 
