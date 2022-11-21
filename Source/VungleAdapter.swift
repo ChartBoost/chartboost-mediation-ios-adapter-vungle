@@ -49,12 +49,11 @@ final class VungleAdapter: PartnerAdapter {
     func setUp(with configuration: PartnerConfiguration, completion: @escaping (Error?) -> Void) {
         log(.setUpStarted)
         
+        // Get credentials, fail early if they are unavailable
         guard let appId = configuration.credentials[.appIDKey] as? String, !appId.isEmpty else {
             let error = self.error(.missingSetUpParameter(key: .appIDKey))
             self.log(.setUpFailed(error))
-            
             completion(error)
-            
             return
         }
         
@@ -65,8 +64,12 @@ final class VungleAdapter: PartnerAdapter {
         VungleSDK.shared().delegate = router
         VungleSDK.shared().sdkHBDelegate = router
         
+        // Disable banner auto-refresh for all Vungle ads. Auto-refresh is handled by Helium.
+        VungleSDK.shared().disableBannerRefresh()
+        
         setUpCompletion = completion
         
+        // Initialize Vungle
         do {
             try VungleSDK.shared().start(withAppId: appId)
         } catch {
@@ -78,24 +81,41 @@ final class VungleAdapter: PartnerAdapter {
     /// - parameter request: Information about the ad load request.
     /// - parameter completion: Closure to be performed with the fetched info.
     func fetchBidderInformation(request: PreBidRequest, completion: @escaping ([String : String]?) -> Void) {
-        completion(nil)
+        log(.fetchBidderInfoStarted(request))
+        if let token = VungleSDK.shared().currentSuperToken() as String? {
+            log(.fetchBidderInfoSucceeded(request))
+            completion(["bid_token": token])
+        } else {
+            log(.fetchBidderInfoFailed(request, error: error(.fetchBidderInfoFailure(request), description: "VungleSDK currentSuperToken() returned nil")))
+            completion(nil)
+        }
     }
     
     /// Indicates if GDPR applies or not and the user's GDPR consent status.
     /// - parameter applies: `true` if GDPR applies, `false` if not, `nil` if the publisher has not provided this information.
     /// - parameter status: One of the `GDPRConsentStatus` values depending on the user's preference.
     func setGDPR(applies: Bool?, status: GDPRConsentStatus) {
+        if applies == true, status != .unknown {
+            let gdprStatus: VungleConsentStatus = status == .granted ? .accepted : .denied
+            VungleSDK.shared().update(gdprStatus, consentMessageVersion: "")
+            log(.privacyUpdated(setting: "updateConsentStatus", value: gdprStatus.rawValue))
+        }
     }
     
     /// Indicates the CCPA status both as a boolean and as an IAB US privacy string.
     /// - parameter hasGivenConsent: A boolean indicating if the user has given consent.
     /// - parameter privacyString: An IAB-compliant string indicating the CCPA status.
     func setCCPA(hasGivenConsent: Bool, privacyString: String) {
+        let ccpaStatus: VungleCCPAStatus = hasGivenConsent ? .accepted : .denied
+        VungleSDK.shared().update(ccpaStatus)
+        log(.privacyUpdated(setting: "updateCCPAStatus", value: ccpaStatus.rawValue))
     }
     
     /// Indicates if the user is subject to COPPA or not.
     /// - parameter isChildDirected: `true` if the user is subject to COPPA, `false` otherwise.
     func setCOPPA(isChildDirected: Bool) {
+        VungleSDK.shared().updateCOPPAStatus(isChildDirected)
+        log(.privacyUpdated(setting: "updateCOPPAStatus", value: isChildDirected))
     }
     
     /// Creates a new ad object in charge of communicating with a single partner SDK ad instance.
