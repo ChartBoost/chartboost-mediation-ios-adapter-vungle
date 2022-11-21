@@ -24,4 +24,7 @@ Pod::Spec.new do |spec|
 
   # Partner network SDK and version that this adapter is certified to work with.
   spec.dependency 'VungleSDK-iOS', '6.11' 
+
+  # The partner network SDK is a static framework which requires the static_framework option.
+  spec.static_framework = true
 end
