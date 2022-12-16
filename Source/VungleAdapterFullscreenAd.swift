@@ -50,14 +50,12 @@ final class VungleAdapterFullscreenAd: VungleAdapterAd, PartnerAd {
         showCompletion = completion
         
         // Show ad
-        DispatchQueue.main.async { [self] in
-            do {
-                try VungleSDK.shared().playAd(viewController, options: [:], placementID: request.partnerPlacement)
-            } catch {
-                log(.showFailed(error))
-                completion(.failure(error))
-                showCompletion = nil
-            }
+        do {
+            try VungleSDK.shared().playAd(viewController, options: [:], placementID: request.partnerPlacement)
+        } catch {
+            log(.showFailed(error))
+            completion(.failure(error))
+            showCompletion = nil
         }
     }
 }
