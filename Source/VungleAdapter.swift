@@ -82,7 +82,7 @@ final class VungleAdapter: PartnerAdapter {
     /// - parameter completion: Closure to be performed with the fetched info.
     func fetchBidderInformation(request: PreBidRequest, completion: @escaping ([String : String]?) -> Void) {
         log(.fetchBidderInfoStarted(request))
-        if let token = VungleSDK.shared().currentSuperToken() as String? {
+        if let token = VungleSDK.shared().currentSuperToken(forPlacementID: nil, forSize: 0) as String? {
             log(.fetchBidderInfoSucceeded(request))
             completion(["bid_token": token])
         } else {
