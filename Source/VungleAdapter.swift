@@ -51,7 +51,7 @@ final class VungleAdapter: PartnerAdapter {
         
         // Get credentials, fail early if they are unavailable
         guard let appId = configuration.credentials[.appIDKey] as? String, !appId.isEmpty else {
-            let error = self.error(.missingSetUpParameter(key: .appIDKey))
+            let error = self.error(.initializationFailureInvalidCredentials, description: "Missing \(String.appIDKey)")
             self.log(.setUpFailed(error))
             completion(error)
             return
@@ -86,7 +86,7 @@ final class VungleAdapter: PartnerAdapter {
             log(.fetchBidderInfoSucceeded(request))
             completion(["bid_token": token])
         } else {
-            log(.fetchBidderInfoFailed(request, error: error(.fetchBidderInfoFailure(request), description: "VungleSDK currentSuperToken() returned nil")))
+            log(.fetchBidderInfoFailed(request, error: error(.prebidFailurePartnerNotIntegrated, description: "VungleSDK currentSuperToken() returned nil")))
             completion(nil)
         }
     }
@@ -132,7 +132,7 @@ final class VungleAdapter: PartnerAdapter {
         case .banner:
             return VungleAdapterBannerAd(adapter: self, request: request, delegate: delegate)
         @unknown default:
-            throw error(.adFormatNotSupported(request))
+            throw error(.loadFailureUnsupportedAdFormat)
         }
     }
 }
@@ -150,7 +150,7 @@ extension VungleAdapter {
     
     /// VungleSDK initialization failure forwarded by router.
     func vungleSDKFailedToInitializeWithError(_ partnerError: Error) {
-        let error = error(.setUpFailure, error: partnerError)
+        let error = error(.initializationFailurePartnerNotIntegrated, error: partnerError)
         log(.setUpFailed(error))
         setUpCompletion?(error)
         setUpCompletion = nil

@@ -100,13 +100,13 @@ extension VungleAdapterBannerAd {
                         loadCompletion?(.success([:])) ?? log(.loadResultIgnored)
                     } else {
                         // Fail if inlineView container is unavailable. This should never happen since it is set on load.
-                        let error = error(.loadFailure, description: "Vungle adapter inlineView is nil.", error: partnerError)
+                        let error = error(.loadFailureNoInlineView, description: "Vungle adapter inlineView is nil.", error: partnerError)
                         log(.loadFailed(error))
                         loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
                     }
                 } catch {
                     // Fail to attach vungle view to inlineView container.
-                    let error = self.error(.loadFailure, error: error)
+                    let error = self.error(.loadFailureException, error: error)
                     log(.loadFailed(error))
                     loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
                 }
@@ -115,7 +115,7 @@ extension VungleAdapterBannerAd {
             }
         } else {
             // Report load failure
-            let error = error(.loadFailure, error: partnerError)
+            let error = error(.loadFailureException, error: partnerError)
             log(.loadFailed(error))
             loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
             loadCompletion = nil
