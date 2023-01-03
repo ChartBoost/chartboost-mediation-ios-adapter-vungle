@@ -86,7 +86,7 @@ final class VungleAdapter: PartnerAdapter {
             log(.fetchBidderInfoSucceeded(request))
             completion(["bid_token": token])
         } else {
-            log(.fetchBidderInfoFailed(request, error: error(.prebidFailurePartnerNotIntegrated, description: "VungleSDK currentSuperToken() returned nil")))
+            log(.fetchBidderInfoFailed(request, error: error(.prebidFailureUnknown, description: "VungleSDK currentSuperToken() returned nil")))
             completion(nil)
         }
     }
