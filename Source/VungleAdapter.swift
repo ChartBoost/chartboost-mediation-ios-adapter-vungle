@@ -150,7 +150,7 @@ extension VungleAdapter {
     
     /// VungleSDK initialization failure forwarded by router.
     func vungleSDKFailedToInitializeWithError(_ partnerError: Error) {
-        let error = error(.initializationFailurePartnerNotIntegrated, error: partnerError)
+        let error = error(.initializationFailureUnknown, error: partnerError)
         log(.setUpFailed(error))
         setUpCompletion?(error)
         setUpCompletion = nil

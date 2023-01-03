@@ -106,7 +106,7 @@ extension VungleAdapterBannerAd {
                     }
                 } catch {
                     // Fail to attach vungle view to inlineView container.
-                    let error = self.error(.loadFailureException, error: error)
+                    let error = self.error(.loadFailureUnknown, error: error)
                     log(.loadFailed(error))
                     loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
                 }
@@ -115,7 +115,7 @@ extension VungleAdapterBannerAd {
             }
         } else {
             // Report load failure
-            let error = error(.loadFailureException, error: partnerError)
+            let error = error(.loadFailureUnknown, error: partnerError)
             log(.loadFailed(error))
             loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
             loadCompletion = nil
