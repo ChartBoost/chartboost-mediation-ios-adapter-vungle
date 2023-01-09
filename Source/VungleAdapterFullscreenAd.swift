@@ -23,7 +23,9 @@ final class VungleAdapterFullscreenAd: VungleAdapterAd, PartnerAd {
         log(.loadStarted)
         
         // If ad already loaded succeed immediately
-        guard !VungleSDK.shared().isAdCached(forPlacementID: request.partnerPlacement, adMarkup: request.adm) else {
+        guard !(request.adm == nil && VungleSDK.shared().isAdCached(forPlacementID: request.partnerPlacement))
+           && !(request.adm != nil && VungleSDK.shared().isAdCached(forPlacementID: request.partnerPlacement, adMarkup: request.adm))
+        else {
             log(.loadSucceeded)
             completion(.success([:]))
             return
@@ -32,7 +34,11 @@ final class VungleAdapterFullscreenAd: VungleAdapterAd, PartnerAd {
         // Start loading
         loadCompletion = completion
         do {
-            try VungleSDK.shared().loadPlacement(withID: request.partnerPlacement, adMarkup: request.adm)
+            if let adm = request.adm {
+                try VungleSDK.shared().loadPlacement(withID: request.partnerPlacement, adMarkup: adm)
+            } else {
+                try VungleSDK.shared().loadPlacement(withID: request.partnerPlacement)
+            }
         } catch {
             log(.loadFailed(error))
             completion(.failure(error))
@@ -51,7 +57,11 @@ final class VungleAdapterFullscreenAd: VungleAdapterAd, PartnerAd {
         
         // Show ad
         do {
-            try VungleSDK.shared().playAd(viewController, options: [:], placementID: request.partnerPlacement)
+            if let adm = request.adm {
+                try VungleSDK.shared().playAd(viewController, options: [:], placementID: request.partnerPlacement, adMarkup: adm)
+            } else {
+                try VungleSDK.shared().playAd(viewController, options: [:], placementID: request.partnerPlacement)
+            }
         } catch {
             log(.showFailed(error))
             completion(.failure(error))
