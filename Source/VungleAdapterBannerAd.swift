@@ -27,7 +27,9 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
         let bannerSize = vungleBannerSize(for: request.size)
         
         // If ad already loaded succeed immediately
-        guard !VungleSDK.shared().isAdCached(forPlacementID: request.partnerPlacement, adMarkup: request.adm, with: bannerSize) else {
+        guard !(request.adm == nil && VungleSDK.shared().isAdCached(forPlacementID: request.partnerPlacement, with: bannerSize))
+           && !(request.adm != nil && VungleSDK.shared().isAdCached(forPlacementID: request.partnerPlacement, adMarkup: request.adm, with: bannerSize))
+        else {
             log(.loadSucceeded)
             completion(.success([:]))
             return
@@ -35,7 +37,11 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
         
         // Start loading
         do {
-            try VungleSDK.shared().loadPlacement(withID: request.partnerPlacement, adMarkup: request.adm, with: bannerSize)
+            if let adm = request.adm {
+                try VungleSDK.shared().loadPlacement(withID: request.partnerPlacement, adMarkup: adm, with: bannerSize)
+            } else {
+                try VungleSDK.shared().loadPlacement(withID: request.partnerPlacement, with: bannerSize)
+            }
         } catch {
             log(.loadFailed(error))
             completion(.failure(error))
