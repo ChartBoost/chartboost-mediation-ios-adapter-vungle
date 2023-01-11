@@ -2,7 +2,7 @@ Pod::Spec.new do |spec|
   spec.name        = 'ChartboostHeliumAdapterVungle'
   spec.version     = '4.6.11.0.0'
   spec.license     = { :type => 'MIT', :file => 'LICENSE.md' }
-  spec.homepage    = 'https://github.com/ChartBoost/helium-ios-adapter-chartboost'
+  spec.homepage    = 'https://github.com/ChartBoost/helium-ios-adapter-vungle'
   spec.authors     = { 'Chartboost' => 'https://www.chartboost.com/' }
   spec.summary     = 'Helium iOS SDK Vungle adapter.'
   spec.description = 'Vungle Adapters for mediating through Helium. Supported ad formats: Banner, Interstitial, and Rewarded.'
