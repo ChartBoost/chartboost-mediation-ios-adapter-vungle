@@ -138,6 +138,7 @@ final class VungleAdapter: PartnerAdapter {
         guard (!storage.ads.contains(where: { $0.request.partnerPlacement == request.partnerPlacement }) || request.format == .banner)
             && !router.isLoadInProgress(for: request)
         else {
+            log("Failed to load ad for already loading placement \(request.partnerPlacement)")
             throw error(.loadFailureLoadInProgress)
         }
         switch request.format {
