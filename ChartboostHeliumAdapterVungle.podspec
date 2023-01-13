@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name        = 'ChartboostHeliumAdapterVungle'
-  spec.version     = '4.6.11.0.0'
+  spec.version     = '4.6.12.1.0'
   spec.license     = { :type => 'MIT', :file => 'LICENSE.md' }
   spec.homepage    = 'https://github.com/ChartBoost/helium-ios-adapter-vungle'
   spec.authors     = { 'Chartboost' => 'https://www.chartboost.com/' }
@@ -23,7 +23,7 @@ Pod::Spec.new do |spec|
   spec.dependency 'ChartboostHelium', '~> 4.0'
 
   # Partner network SDK and version that this adapter is certified to work with.
-  spec.dependency 'VungleSDK-iOS', '6.11' 
+  spec.dependency 'VungleSDK-iOS', '6.12.1'
 
   # The partner network SDK is a static framework which requires the static_framework option.
   spec.static_framework = true
