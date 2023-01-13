@@ -132,11 +132,8 @@ final class VungleAdapter: PartnerAdapter {
         // Vungle does not support multiple loads for the same placement (they will result in only one ad loaded).
         // We make an exception for banners where there is little downside (this can end up causing show failures for full-screen ads,
         // but not so for banners) and prevents banner auto-refresh from stalling in case Vungle won bids repeatedly with the same placement.
-        // Vungle also does not handle well loading a placement when a load for the same placement is already ongoing.
-        // Note the second case may happen after a PartnerAd has been created and invalidated, since Vungle will keep the load going
-        // even after Helium has discarded the PartnerAd instance.
-        guard (!storage.ads.contains(where: { $0.request.partnerPlacement == request.partnerPlacement }) || request.format == .banner)
-            && !router.isLoadInProgress(for: request)
+        guard !storage.ads.contains(where: { $0.request.partnerPlacement == request.partnerPlacement })
+            || request.format == .banner
         else {
             log("Failed to load ad for already loading placement \(request.partnerPlacement)")
             throw error(.loadFailureLoadInProgress)
