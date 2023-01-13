@@ -15,8 +15,24 @@ final class VungleAdapterRouter: NSObject, VungleSDKHBDelegate, VungleSDKDelegat
     /// The Vungle partner adapter.
     let adapter: VungleAdapter
     
+    /// Set of placements in process of loading by the Vungle SDK.
+    /// We need to keep track of this to avoid making a `loadPlacement()` call when a previous one is still ongoing, which is not supported by Vungle.
+    private var loadingPlacements: Set<String> = []
+    
     init(adapter: VungleAdapter) {
         self.adapter = adapter
+    }
+    
+    func isLoadInProgress(forPlacement placement: String) -> Bool {
+        loadingPlacements.contains(placement)
+    }
+    
+    func recordLoadStart(forPlacement placement: String) {
+        loadingPlacements.insert(placement)
+    }
+    
+    func recordLoadEnd(forPlacement placement: String) {
+        loadingPlacements.remove(placement)
     }
 }
 
@@ -25,6 +41,10 @@ final class VungleAdapterRouter: NSObject, VungleSDKHBDelegate, VungleSDKDelegat
 extension VungleAdapterRouter {
     
     func vungleAdPlayabilityUpdate(_ isAdPlayable: Bool, placementID: String?, adMarkup: String?, error partnerError: Error?) {
+        /// Record loading ended so another load can start with the same placement.
+        if let placementID = placementID {
+            recordLoadEnd(forPlacement: placementID)
+        }
         ad(for: placementID, prioritizeVisibleBanner: false)?.vungleAdPlayabilityUpdate?(isAdPlayable, placementID: placementID, adMarkup: adMarkup, error: partnerError)
     }
     

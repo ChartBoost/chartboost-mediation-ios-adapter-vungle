@@ -33,6 +33,7 @@ final class VungleAdapterFullscreenAd: VungleAdapterAd, PartnerAd {
         
         // Start loading
         loadCompletion = completion
+        router.recordLoadStart(forPlacement: request.partnerPlacement)
         do {
             if let adm = request.adm {
                 try VungleSDK.shared().loadPlacement(withID: request.partnerPlacement, adMarkup: adm)
@@ -40,6 +41,7 @@ final class VungleAdapterFullscreenAd: VungleAdapterAd, PartnerAd {
                 try VungleSDK.shared().loadPlacement(withID: request.partnerPlacement)
             }
         } catch {
+            router.recordLoadEnd(forPlacement: request.partnerPlacement)
             log(.loadFailed(error))
             completion(.failure(error))
             loadCompletion = nil
