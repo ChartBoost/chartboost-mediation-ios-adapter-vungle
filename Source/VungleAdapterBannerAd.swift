@@ -22,8 +22,6 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
     func load(with viewController: UIViewController?, completion: @escaping (Result<PartnerEventDetails, Error>) -> Void) {
         log(.loadStarted)
         
-        loadCompletion = completion
-        
         let bannerSize = vungleBannerSize(for: request.size)
         
         // If ad already loaded succeed immediately
@@ -36,6 +34,8 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
         }
         
         // Start loading
+        loadCompletion = completion
+        router.recordLoadStart(for: request)
         do {
             if let adm = request.adm {
                 try VungleSDK.shared().loadPlacement(withID: request.partnerPlacement, adMarkup: adm, with: bannerSize)
@@ -43,6 +43,7 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
                 try VungleSDK.shared().loadPlacement(withID: request.partnerPlacement, with: bannerSize)
             }
         } catch {
+            router.recordLoadEnd(for: request)
             log(.loadFailed(error))
             completion(.failure(error))
             loadCompletion = nil
