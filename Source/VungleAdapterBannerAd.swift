@@ -40,6 +40,7 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
         // This may happen after a PartnerAd has been created and invalidated, since Vungle will keep the load going
         // even after Helium has discarded the PartnerAd instance.
         if router.isLoadInProgress(for: request) {
+            // `loadCompletion` is executed when the ongoing load finishes leading to a `vungleAdPlayabilityUpdate()` call
             return
         }
         
