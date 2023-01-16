@@ -29,8 +29,12 @@ class VungleAdapterAd: NSObject, VungleSDKHBDelegate {
     /// The completion for the ongoing show operation.
     var showCompletion: ((Result<PartnerEventDetails, Error>) -> Void)?
     
-    init(adapter: PartnerAdapter, request: PartnerAdLoadRequest, delegate: PartnerAdDelegate) {
+    /// The Vungle adapter router which keeps track of loading placements.
+    let router: VungleAdapterRouter
+    
+    init(adapter: PartnerAdapter, router: VungleAdapterRouter, request: PartnerAdLoadRequest, delegate: PartnerAdDelegate) {
         self.adapter = adapter
+        self.router = router
         self.request = request
         self.delegate = delegate
     }

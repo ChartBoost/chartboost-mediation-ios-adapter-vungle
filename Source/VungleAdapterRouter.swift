@@ -15,8 +15,47 @@ final class VungleAdapterRouter: NSObject, VungleSDKHBDelegate, VungleSDKDelegat
     /// The Vungle partner adapter.
     let adapter: VungleAdapter
     
+    /// Set of placements in process of loading by the Vungle SDK.
+    /// We need to keep track of this to avoid making a `loadPlacement()` call when a previous one is still ongoing, which is not supported by Vungle.
+    private var loadingPlacements: Set<String> = []
+    
+    /// Similar to `loadingPlacements`, but keeps track of loading markups for programmatic loads.
+    private var loadingMarkups: Set<String> = []
+    
     init(adapter: VungleAdapter) {
         self.adapter = adapter
+    }
+    
+    func isLoadInProgress(for request: PartnerAdLoadRequest) -> Bool {
+        if let adm = request.adm {
+            return loadingMarkups.contains(adm)
+        } else {
+            return loadingPlacements.contains(request.partnerPlacement)
+        }
+    }
+    
+    func recordLoadStart(for request: PartnerAdLoadRequest) {
+        if let adm = request.adm {
+            loadingMarkups.insert(adm)
+        } else {
+            loadingPlacements.insert(request.partnerPlacement)
+        }
+    }
+    
+    func recordLoadEnd(for request: PartnerAdLoadRequest) {
+        if let adm = request.adm {
+            recordLoadEnd(forMarkup: adm)
+        } else {
+            recordLoadEnd(forPlacement: request.partnerPlacement)
+        }
+    }
+    
+    private func recordLoadEnd(forMarkup markup: String) {
+        loadingMarkups.remove(markup)
+    }
+    
+    private func recordLoadEnd(forPlacement placement: String) {
+        loadingPlacements.remove(placement)
     }
 }
 
@@ -25,6 +64,12 @@ final class VungleAdapterRouter: NSObject, VungleSDKHBDelegate, VungleSDKDelegat
 extension VungleAdapterRouter {
     
     func vungleAdPlayabilityUpdate(_ isAdPlayable: Bool, placementID: String?, adMarkup: String?, error partnerError: Error?) {
+        /// Record loading ended so another load can start with the same placement.
+        if let adMarkup = adMarkup {
+            recordLoadEnd(forMarkup: adMarkup)
+        } else if let placementID = placementID {
+            recordLoadEnd(forPlacement: placementID)
+        }
         ad(for: placementID, prioritizeVisibleBanner: false)?.vungleAdPlayabilityUpdate?(isAdPlayable, placementID: placementID, adMarkup: adMarkup, error: partnerError)
     }
     

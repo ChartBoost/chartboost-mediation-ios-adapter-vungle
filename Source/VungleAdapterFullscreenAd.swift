@@ -31,8 +31,19 @@ final class VungleAdapterFullscreenAd: VungleAdapterAd, PartnerAd {
             return
         }
         
-        // Start loading
         loadCompletion = completion
+        
+        // If ad loading already in progress wait for it to finish.
+        // Vungle does not handle well loadPlacement() calls when a load for the same placement is already ongoing.
+        // This may happen after a PartnerAd has been created and invalidated, since Vungle will keep the load going
+        // even after Helium has discarded the PartnerAd instance.
+        if router.isLoadInProgress(for: request) {
+            // `loadCompletion` is executed when the ongoing load finishes leading to a `vungleAdPlayabilityUpdate()` call
+            return
+        }
+        
+        // Start loading
+        router.recordLoadStart(for: request)
         do {
             if let adm = request.adm {
                 try VungleSDK.shared().loadPlacement(withID: request.partnerPlacement, adMarkup: adm)
@@ -40,6 +51,7 @@ final class VungleAdapterFullscreenAd: VungleAdapterAd, PartnerAd {
                 try VungleSDK.shared().loadPlacement(withID: request.partnerPlacement)
             }
         } catch {
+            router.recordLoadEnd(for: request)
             log(.loadFailed(error))
             completion(.failure(error))
             loadCompletion = nil

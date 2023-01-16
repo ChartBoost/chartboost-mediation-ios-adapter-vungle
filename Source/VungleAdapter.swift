@@ -126,11 +126,23 @@ final class VungleAdapter: PartnerAdapter {
     /// - parameter request: Information about the ad load request.
     /// - parameter delegate: The delegate that will receive ad life-cycle notifications.
     func makeAd(request: PartnerAdLoadRequest, delegate: PartnerAdDelegate) throws -> PartnerAd {
+        guard let router = router else {
+            throw error(.loadFailurePartnerNotInitialized, description: "router was nil on makeAd()")
+        }
+        // Vungle does not support multiple loads for the same placement (they will result in only one ad loaded).
+        // We make an exception for banners where there is little downside (this can end up causing show failures for full-screen ads,
+        // but not so for banners) and prevents banner auto-refresh from stalling in case Vungle won bids repeatedly with the same placement.
+        guard !storage.ads.contains(where: { $0.request.partnerPlacement == request.partnerPlacement })
+            || request.format == .banner
+        else {
+            log("Failed to load ad for already loading placement \(request.partnerPlacement)")
+            throw error(.loadFailureLoadInProgress)
+        }
         switch request.format {
         case .interstitial, .rewarded:
-            return VungleAdapterFullscreenAd(adapter: self, request: request, delegate: delegate)
+            return VungleAdapterFullscreenAd(adapter: self, router: router, request: request, delegate: delegate)
         case .banner:
-            return VungleAdapterBannerAd(adapter: self, request: request, delegate: delegate)
+            return VungleAdapterBannerAd(adapter: self, router: router, request: request, delegate: delegate)
         @unknown default:
             throw error(.loadFailureUnsupportedAdFormat)
         }
