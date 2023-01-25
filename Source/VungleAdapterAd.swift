@@ -10,8 +10,8 @@
 //  Created by Vu Chau on 9/16/22.
 //
 
+import ChartboostMediationSDK
 import Foundation
-import HeliumSdk
 import VungleSDK
 
 /// Base class for Helium Vungle adapter ads.
