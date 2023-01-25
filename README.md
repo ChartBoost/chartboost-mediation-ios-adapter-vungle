@@ -1,6 +1,6 @@
 # Chartboost Mediation Vungle Adapter
 
-The Chartboost Mediation Vungle adapter mediates the Vungle SDK into the Chartboost Mediation SDK.
+The Chartboost Mediation Vungle adapter mediates Vungle via the Chartboost Mediation SDK.
 
 ## Minimum Requirements
 
