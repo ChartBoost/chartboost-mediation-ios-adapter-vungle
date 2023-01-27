@@ -5,7 +5,7 @@
 
 //
 //  VungleAdapterRouter.swift
-//  ChartboostHeliumAdapterVungle
+//  ChartboostMediationAdapterVungle
 //
 //  Created by Vu Chau on 9/16/22.
 //
@@ -178,14 +178,14 @@ private extension VungleAdapterRouter {
             adapter.log("\(functionName) call ignored with placementID \(partnerPlacement), no corresponding partner ad found.")
             return nil
         }
-        // It is possible that multiple banner ads with the same placement are created given that Helium preloads the next banner while the previous one is
+        // It is possible that multiple banner ads with the same placement are created given that Chartboost Mediation preloads the next banner while the previous one is
         // still visible as part of its auto-refresh process.
         // Knowing which `PartnerAd` instance corresponds to each delegate method call gets tricky.
         // Here we do a best attempt at it by forwarding calls we know should happen only on visible banners to the currently visible banner ad.
         // Other calls are forwarded to the latest created ad.
         // The solution is not ideal but the only one to make this work without preventing multiple loads for ads with the same placement, which would make
-        // Helium banner auto-refresh stop if the same partner placement won over and over again.
-        // It should work fine under the assumption that Helium does not support the creation of multiple banners with the same placement by publishers, which means
+        // Chartboost Mediation banner auto-refresh stop if the same partner placement won over and over again.
+        // It should work fine under the assumption that Chartboost Mediation does not support the creation of multiple banners with the same placement by publishers, which means
         // at a single point in time there should be at most two Vungle banners with the same placement loaded: the visible one and the preloaded one intended to replace it.
         if ad.request.format == .banner && prioritizeVisibleBanner {
             let firstVisibleBanner = adapter.storage.ads.first(where: { $0.request.partnerPlacement == partnerPlacement && $0.inlineView?.window != nil }) as? VungleAdapterAd

@@ -5,7 +5,7 @@
 
 //
 //  VungleAdapterBannerAd.swift
-//  ChartboostHeliumAdapterVungle
+//  ChartboostMediationAdapterVungle
 //
 //  Created by Vu Chau on 9/16/22.
 //
@@ -14,7 +14,7 @@ import ChartboostMediationSDK
 import Foundation
 import VungleSDK
 
-/// Helium Vungle adapter banner ad.
+/// Chartboost Mediation Vungle adapter banner ad.
 final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
     
     /// The partner ad view to display inline. E.g. a banner view.
@@ -43,7 +43,7 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
         // If ad loading already in progress wait for it to finish.
         // Vungle does not handle well loadPlacement() calls when a load for the same placement is already ongoing.
         // This may happen after a PartnerAd has been created and invalidated, since Vungle will keep the load going
-        // even after Helium has discarded the PartnerAd instance.
+        // even after Chartboost Mediation has discarded the PartnerAd instance.
         if router.isLoadInProgress(for: request) {
             // `loadCompletion` is executed when the ongoing load finishes leading to a `vungleAdPlayabilityUpdate()` call
             return
@@ -73,8 +73,8 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
         /// NO-OP
     }
     
-    /// Map Helium's banner sizes to the Vungle SDK's supported sizes.
-    /// - Parameter size: The Helium's banner size.
+    /// Map Chartboost Mediation's banner sizes to the Vungle SDK's supported sizes.
+    /// - Parameter size: The Chartboost Mediation's banner size.
     /// - Returns: The corresponding Vungle banner size.
     private func vungleBannerSize(for size: CGSize?) -> VungleAdSize {
         let height = size?.height ?? 50

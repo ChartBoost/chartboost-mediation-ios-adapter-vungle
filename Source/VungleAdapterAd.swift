@@ -5,7 +5,7 @@
 
 //
 //  VungleAdapterAd.swift
-//  ChartboostHeliumAdapterVungle
+//  ChartboostMediationAdapterVungle
 //
 //  Created by Vu Chau on 9/16/22.
 //
@@ -14,7 +14,7 @@ import ChartboostMediationSDK
 import Foundation
 import VungleSDK
 
-/// Base class for Helium Vungle adapter ads.
+/// Base class for Chartboost Mediation Vungle adapter ads.
 class VungleAdapterAd: NSObject, VungleSDKHBDelegate {
 
     /// The partner adapter that created this ad.
