@@ -1,14 +1,7 @@
 // Copyright 2022-2023 Chartboost, Inc.
-// 
+//
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
-
-//
-//  VungleAdapterBannerAd.swift
-//  ChartboostMediationAdapterVungle
-//
-//  Created by Vu Chau on 9/16/22.
-//
 
 import ChartboostMediationSDK
 import Foundation
