@@ -145,6 +145,112 @@ final class VungleAdapter: PartnerAdapter {
             throw error(.loadFailureUnsupportedAdFormat)
         }
     }
+    
+    /// Maps a partner setup error to a Helium error code.
+    /// Helium SDK calls this method when a setup completion is called with a partner error.
+    ///
+    /// A default implementation is provided that returns `nil`.
+    /// Only implement if the partner SDK provides its own list of error codes that can be mapped to Helium's.
+    /// If some case cannot be mapped return `nil` to let Helium choose a default error code.
+    func mapSetUpError(_ error: Error) -> HeliumError.Code? {
+        let code = VungleSDKErrorCode(rawValue: UInt32((error as NSError).code))
+        switch code {
+        case VungleSDKErrorNoAppID:
+            return .initializationFailureInvalidCredentials
+        case VungleSDKErrorInvalidiOSVersion:
+            return .initializationFailureOSVersionNotSupported
+        case VungleSDKErrorSDKAlreadyInitializing:
+            return .initializationFailureAborted
+        default:
+            return nil
+        }
+    }
+    
+    /// Maps a partner load error to a Helium error code.
+    /// Helium SDK calls this method when a load completion is called with a partner error.
+    ///
+    /// A default implementation is provided that returns `nil`.
+    /// Only implement if the partner SDK provides its own list of error codes that can be mapped to Helium's.
+    /// If some case cannot be mapped return `nil` to let Helium choose a default error code.
+    func mapLoadError(_ error: Error) -> HeliumError.Code? {
+        let code = VungleSDKErrorCode(rawValue: UInt32((error as NSError).code))
+        switch code {
+        case VungleSDKErrorInvalidAdTypeForFeedBasedAdExperience:
+            return .loadFailureMismatchedAdFormat
+        case VungleSDKErrorNoAppID:
+            return .loadFailureInvalidCredentials
+        case VungleSDKErrorFlexFeedContainerViewSizeError:
+            return .loadFailureInvalidBannerSize
+        case VungleSDKErrorFlexFeedContainerViewSizeRatioError:
+            return .loadFailureInvalidBannerSize
+        case InvalidPlacementsArray:
+            return .loadFailureInvalidPartnerPlacement
+        case VungleSDKErrorInvalidiOSVersion:
+            return .loadFailureOSVersionNotSupported
+        case VungleSDKErrorTopMostViewControllerMismatch:
+            return .loadFailureViewControllerNotFound
+        case VungleSDKErrorUnknownPlacementID:
+            return .loadFailureInvalidPartnerPlacement
+        case VungleSDKErrorSDKNotInitialized:
+            return .loadFailurePartnerNotInitialized
+        case VungleSDKErrorSleepingPlacement:
+            return .loadFailureRateLimited
+        case VungleSDKErrorNoAdsAvailable:
+            return .loadFailureNoFill
+        case VungleSDKErrorNotEnoughFileSystemSize:
+            return .loadFailureOutOfStorage
+        case VungleDiscSpaceProviderErrorNoFileSystemAttributes:
+            return .loadFailureOutOfStorage
+        case VungleSDKErrorUnknownBannerSize:
+            return .loadFailureInvalidBannerSize
+        case VungleSDKResetPlacementForDifferentAdSize:
+            return .loadFailureMismatchedAdFormat
+        case VungleSDKErrorInvalidAdTypeForNativeAdExperience:
+            return .loadFailureMismatchedAdFormat
+        case VungleSDKErrorMissingAdMarkupForPlacement:
+            return .loadFailureInvalidAdMarkup
+        case VungleSDKErrorInvalidAdMarkupForPlacement:
+            return .loadFailureInvalidAdMarkup
+        case VungleSDKErrorIllegalAdRequest:
+            return .loadFailureInvalidAdRequest
+        default:
+            return nil
+        }
+    }
+    
+    /// Maps a partner show error to a Helium error code.
+    /// Helium SDK calls this method when a show completion is called with a partner error.
+    ///
+    /// A default implementation is provided that returns `nil`.
+    /// Only implement if the partner SDK provides its own list of error codes that can be mapped to Helium's.
+    /// If some case cannot be mapped return `nil` to let Helium choose a default error code.
+    func mapShowError(_ error: Error) -> HeliumError.Code? {
+        let code = VungleSDKErrorCode(rawValue: UInt32((error as NSError).code))
+        switch code {
+        case VungleSDKErrorCannotPlayAdAlreadyPlaying:
+            return .showFailureShowInProgress
+        case VungleSDKErrorCannotPlayAdWaiting:
+            return .showFailureUnknown
+        case VungleSDKErrorFlexFeedContainerViewSizeError:
+            return .showFailureInvalidBannerSize
+        case VungleSDKErrorFlexFeedContainerViewSizeRatioError:
+            return .showFailureInvalidBannerSize
+        case InvalidPlacementsArray:
+            return .showFailureInvalidPartnerPlacement
+        case VungleSDKErrorTopMostViewControllerMismatch:
+            return .showFailureViewControllerNotFound
+        case VungleSDKErrorUnknownPlacementID:
+            return .showFailureInvalidPartnerPlacement
+        case VungleSDKErrorSDKNotInitialized:
+            return .showFailureNotInitialized
+        case VungleSDKErrorNoAdsAvailable:
+            return .showFailureNoFill
+        case VungleSDKErrorUnknownBannerSize:
+            return .showFailureInvalidBannerSize
+        default:
+            return nil
+        }
+    }
 }
 
 // MARK: - VungleSDKDelegate
