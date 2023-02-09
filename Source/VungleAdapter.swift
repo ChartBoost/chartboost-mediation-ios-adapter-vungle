@@ -93,6 +93,7 @@ final class VungleAdapter: PartnerAdapter {
     /// - parameter applies: `true` if GDPR applies, `false` if not, `nil` if the publisher has not provided this information.
     /// - parameter status: One of the `GDPRConsentStatus` values depending on the user's preference.
     func setGDPR(applies: Bool?, status: GDPRConsentStatus) {
+        // See https://support.vungle.com/hc/en-us/articles/360048572411
         if applies == true, status != .unknown {
             let gdprStatus: VungleConsentStatus = status == .granted ? .accepted : .denied
             VungleSDK.shared().update(gdprStatus, consentMessageVersion: "")
@@ -104,6 +105,7 @@ final class VungleAdapter: PartnerAdapter {
     /// - parameter hasGivenConsent: A boolean indicating if the user has given consent.
     /// - parameter privacyString: An IAB-compliant string indicating the CCPA status.
     func setCCPA(hasGivenConsent: Bool, privacyString: String) {
+        // See https://support.vungle.com/hc/en-us/articles/360048572411
         let ccpaStatus: VungleCCPAStatus = hasGivenConsent ? .accepted : .denied
         VungleSDK.shared().update(ccpaStatus)
         log(.privacyUpdated(setting: "updateCCPAStatus", value: ccpaStatus.rawValue))
@@ -112,6 +114,7 @@ final class VungleAdapter: PartnerAdapter {
     /// Indicates if the user is subject to COPPA or not.
     /// - parameter isChildDirected: `true` if the user is subject to COPPA, `false` otherwise.
     func setCOPPA(isChildDirected: Bool) {
+        // See https://support.vungle.com/hc/en-us/articles/360048572411
         VungleSDK.shared().updateCOPPAStatus(isChildDirected)
         log(.privacyUpdated(setting: "updateCOPPAStatus", value: isChildDirected))
     }
