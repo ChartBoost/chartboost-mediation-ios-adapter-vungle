@@ -156,8 +156,13 @@ final class VungleAdapter: PartnerAdapter {
     /// Only implement if the partner SDK provides its own list of error codes that can be mapped to Chartboost Mediation's.
     /// If some case cannot be mapped return `nil` to let Chartboost Mediation choose a default error code.
     func mapSetUpError(_ error: Error) -> ChartboostMediationError.Code? {
-        let code = VungleSDKErrorCode(rawValue: UInt32((error as NSError).code))
-        switch code {
+        guard let errorCode = UInt32(exactly: (error as NSError).code) else {
+            return nil
+        }
+
+        let vungleErrorCode = VungleSDKErrorCode(rawValue: errorCode)
+
+        switch vungleErrorCode {
         case VungleSDKErrorNoAppID:
             return .initializationFailureInvalidCredentials
         case VungleSDKErrorInvalidiOSVersion:
@@ -176,8 +181,13 @@ final class VungleAdapter: PartnerAdapter {
     /// Only implement if the partner SDK provides its own list of error codes that can be mapped to Chartboost Mediation's.
     /// If some case cannot be mapped return `nil` to let Chartboost Mediation choose a default error code.
     func mapLoadError(_ error: Error) -> ChartboostMediationError.Code? {
-        let code = VungleSDKErrorCode(rawValue: UInt32((error as NSError).code))
-        switch code {
+        guard let errorCode = UInt32(exactly: (error as NSError).code) else {
+            return nil
+        }
+
+        let vungleErrorCode = VungleSDKErrorCode(rawValue: errorCode)
+
+        switch vungleErrorCode {
         case VungleSDKErrorInvalidAdTypeForFeedBasedAdExperience:
             return .loadFailureMismatchedAdFormat
         case VungleSDKErrorNoAppID:
@@ -228,8 +238,13 @@ final class VungleAdapter: PartnerAdapter {
     /// Only implement if the partner SDK provides its own list of error codes that can be mapped to Chartboost Mediation's.
     /// If some case cannot be mapped return `nil` to let Chartboost Mediation choose a default error code.
     func mapShowError(_ error: Error) -> ChartboostMediationError.Code? {
-        let code = VungleSDKErrorCode(rawValue: UInt32((error as NSError).code))
-        switch code {
+        guard let errorCode = UInt32(exactly: (error as NSError).code) else {
+            return nil
+        }
+
+        let vungleErrorCode = VungleSDKErrorCode(rawValue: errorCode)
+        
+        switch vungleErrorCode {
         case VungleSDKErrorCannotPlayAdAlreadyPlaying:
             return .showFailureShowInProgress
         case VungleSDKErrorCannotPlayAdWaiting:
