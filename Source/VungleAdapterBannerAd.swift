@@ -105,6 +105,25 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
         }
     }
     
+    private func addVungleAdToContainer() throws {
+        // Fail if inlineView container is unavailable. This should never happen since it is set on load.
+        guard let inlineView = inlineView else {
+            throw error(.loadFailureNoInlineView, description: "Vungle adapter inlineView is nil.")
+        }
+        
+        // Set the frame for the container.
+        inlineView.frame = CGRect(origin: .zero, size: adContainerSize)
+        
+        // Attach vungle view to the inlineView container.
+        if let adm = request.adm {
+            // Programmatic
+            try VungleSDK.shared().addAdView(to: inlineView, withOptions: [:], placementID: request.partnerPlacement, adMarkup: adm)
+        } else {
+            // Non-programmatic
+            try VungleSDK.shared().addAdView(to: inlineView, withOptions: [:], placementID: request.partnerPlacement)
+        }
+    }
+    
     /// Mapping of the request ad size to Vungle's ad size type. Nil means a MREC banner.
     private var vungleAdSize: VungleAdSize? {
         let size = request.size ?? IABStandardAdSize
@@ -158,19 +177,10 @@ extension VungleAdapterBannerAd {
             // Report load success
             DispatchQueue.main.async { [self] in
                 do {
-                    if let inlineView = inlineView {
-                        // Set the frame for the container.
-                        inlineView.frame = CGRect(origin: .zero, size: adContainerSize)
-                        // Attach vungle view to the inlineView container.
-                        try VungleSDK.shared().addAdView(to: inlineView, withOptions: [:], placementID: request.partnerPlacement)
-                        log(.loadSucceeded)
-                        loadCompletion?(.success([:])) ?? log(.loadResultIgnored)
-                    } else {
-                        // Fail if inlineView container is unavailable. This should never happen since it is set on load.
-                        let error = error(.loadFailureNoInlineView, description: "Vungle adapter inlineView is nil.", error: partnerError)
-                        log(.loadFailed(error))
-                        loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
-                    }
+                    // Attach vungle view to the inlineView container.
+                    try addVungleAdToContainer()
+                    log(.loadSucceeded)
+                    loadCompletion?(.success([:])) ?? log(.loadResultIgnored)
                 } catch {
                     // Fail to attach vungle view to inlineView container.
                     log(.loadFailed(error))
