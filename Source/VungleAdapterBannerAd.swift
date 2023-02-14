@@ -22,8 +22,15 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
         
         // If ad already loaded succeed immediately
         guard !adIsCachedByVungle else {
-            log(.loadSucceeded)
-            completion(.success([:]))
+            // Attach vungle view to the inlineView container.
+            do {
+                try addVungleAdToContainer()
+                log(.loadSucceeded)
+                completion(.success([:]))
+            } catch {
+                log(.loadFailed(error))
+                completion(.failure(error))
+            }
             return
         }
         
