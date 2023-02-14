@@ -20,6 +20,18 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
     func load(with viewController: UIViewController?, completion: @escaping (Result<PartnerEventDetails, Error>) -> Void) {
         log(.loadStarted)
         
+        // TODO: Test and figure out Vungle SDK's behavior relating to this safeguard and the issues below.
+        // TODO: Apply a solution.
+        // What happens with banner auto-refresh and/or consecutive loads for the same placement? Does isAdCached return true or false after the banner is rendered with addAdView()?
+        // - if true: this will just show the same ad again!
+        // - if false: then this should be fine.
+        // What to do in the first case?
+        // 1. Prevent consecutive loads for the same placement in VungleAdapter.makeAd()
+        //   - this will make auto-refresh stall if Vungle is the only bidder that can fill
+        // 2. Go ahead and call loadPlacement without this safeguard
+        //   - only if Vungle SDK does allow to load a second ad (doesn't just return the same ad) for the same placement for banners/MREC (which it's not clear, maybe it can be done only after addAdView() is called??)
+        // Do we need to call finishDisplayingAd at some point (PartnerAd.invalidate()?) so Vungle does some necessary clean up? What if a second ad was loaded for the same placement while the first one was still visible, and then we call finishDisplayingAd? Or is this just not possible with Vungle and we should not attempt to do so? Is a call to finishDisplayingAd necessary before a new loadPlacement() call can be successfully made?
+        
         // If ad already loaded succeed immediately
         guard !adIsCachedByVungle else {
             // Attach vungle view to the inlineView container.
