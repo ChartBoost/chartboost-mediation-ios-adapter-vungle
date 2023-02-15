@@ -12,7 +12,7 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
     
     /// The partner ad view to display inline. E.g. a banner view.
     /// Should be nil for full-screen ads.
-    lazy var inlineView: UIView? = UIView()
+    var inlineView: UIView? = UIView()
     
     /// Loads an ad.
     /// - parameter viewController: The view controller on which the ad will be presented on. Needed on load for some banners.
