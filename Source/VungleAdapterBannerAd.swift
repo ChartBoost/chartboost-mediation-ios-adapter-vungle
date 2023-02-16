@@ -20,14 +20,17 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
     func load(with viewController: UIViewController?, completion: @escaping (Result<PartnerEventDetails, Error>) -> Void) {
         log(.loadStarted)
         
-        let bannerSize = vungleBannerSize(for: request.size)
-        
         // If ad already loaded succeed immediately
-        guard !(request.adm == nil && VungleSDK.shared().isAdCached(forPlacementID: request.partnerPlacement, with: bannerSize))
-           && !(request.adm != nil && VungleSDK.shared().isAdCached(forPlacementID: request.partnerPlacement, adMarkup: request.adm, with: bannerSize))
-        else {
-            log(.loadSucceeded)
-            completion(.success([:]))
+        guard !adIsCachedByVungle else {
+            // Attach vungle view to the inlineView container.
+            do {
+                try addVungleAdToContainer()
+                log(.loadSucceeded)
+                completion(.success([:]))
+            } catch {
+                log(.loadFailed(error))
+                completion(.failure(error))
+            }
             return
         }
         
@@ -45,11 +48,7 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
         // Start loading
         router.recordLoadStart(for: request)
         do {
-            if let adm = request.adm {
-                try VungleSDK.shared().loadPlacement(withID: request.partnerPlacement, adMarkup: adm, with: bannerSize)
-            } else {
-                try VungleSDK.shared().loadPlacement(withID: request.partnerPlacement, with: bannerSize)
-            }
+            try loadVungleAd()
         } catch {
             router.recordLoadEnd(for: request)
             log(.loadFailed(error))
@@ -66,29 +65,108 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
         /// NO-OP
     }
     
-    /// Map Chartboost Mediation's banner sizes to the Vungle SDK's supported sizes.
-    /// - Parameter size: The Chartboost Mediation's banner size.
-    /// - Returns: The corresponding Vungle banner size.
-    private func vungleBannerSize(for size: CGSize?) -> VungleAdSize {
-        let height = size?.height ?? 50
-        
-        switch height {
-        case 50...89:
-            return VungleAdSize.banner
-        case 90...249:
-            return VungleAdSize.bannerLeaderboard
-        default:
-            return VungleAdSize.banner
+    /// Indicates if the Vungle SDK has an ad already cached for this placement.
+    /// Note that Vungle cannot load multiple ads for the same placement, so if `isAdCached` returns true we should not call
+    /// `loadPlacement` again for this placement.
+    private var adIsCachedByVungle: Bool {
+        // Programmatic
+        if let adm = request.adm {
+            if let vungleAdSize = vungleAdSize {
+                // Banner
+                return VungleSDK.shared().isAdCached(forPlacementID: request.partnerPlacement, adMarkup: adm, with: vungleAdSize)
+            } else {
+                // MREC
+                return VungleSDK.shared().isAdCached(forPlacementID: request.partnerPlacement, adMarkup: adm)
+            }
+        } else {
+        // Non-programmatic
+            if let vungleAdSize = vungleAdSize {
+                // Banner
+                return VungleSDK.shared().isAdCached(forPlacementID: request.partnerPlacement, with: vungleAdSize)
+            } else {
+                // MREC
+                return VungleSDK.shared().isAdCached(forPlacementID: request.partnerPlacement)
+            }
         }
     }
     
-    /// Get a CGSize corresponding to the given Vungle banner size.
-    /// - Parameter size: The Vungle banner size.
-    /// - Returns: The corresponding CGSize.
-    private func cgSize(for size: VungleAdSize) -> CGSize {
-        size == .banner
-            ? CGSize(width: 320, height: 50)
-            : CGSize(width: 728, height: 90)
+    private func loadVungleAd() throws {
+        // Programmatic
+        if let adm = request.adm {
+            if let vungleAdSize = vungleAdSize {
+                // Banner
+                try VungleSDK.shared().loadPlacement(withID: request.partnerPlacement, adMarkup: adm, with: vungleAdSize)
+            } else {
+                // MREC
+                try VungleSDK.shared().loadPlacement(withID: request.partnerPlacement, adMarkup: adm)
+            }
+        } else {
+        // Non-programmatic
+            if let vungleAdSize = vungleAdSize {
+                // Banner
+                try VungleSDK.shared().loadPlacement(withID: request.partnerPlacement, with: vungleAdSize)
+            } else {
+                // MREC
+                try VungleSDK.shared().loadPlacement(withID: request.partnerPlacement)
+            }
+        }
+    }
+    
+    private func addVungleAdToContainer() throws {
+        // Fail if inlineView container is unavailable. This should never happen since it is set on load.
+        guard let inlineView = inlineView else {
+            throw error(.loadFailureNoInlineView, description: "Vungle adapter inlineView is nil.")
+        }
+        
+        // Set the frame for the container.
+        inlineView.frame = CGRect(origin: .zero, size: adContainerSize)
+        
+        // Attach vungle view to the inlineView container.
+        if let adm = request.adm {
+            // Programmatic
+            try VungleSDK.shared().addAdView(to: inlineView, withOptions: [:], placementID: request.partnerPlacement, adMarkup: adm)
+        } else {
+            // Non-programmatic
+            try VungleSDK.shared().addAdView(to: inlineView, withOptions: [:], placementID: request.partnerPlacement)
+        }
+    }
+    
+    /// Mapping of the request ad size to Vungle's ad size type. Nil means a MREC banner.
+    private var vungleAdSize: VungleAdSize? {
+        let size = request.size ?? IABStandardAdSize
+        switch size {
+        case IABMediumAdSize:
+            // Note that Vungle MREC ads are not considered banners by Vungle and require using a different set of methods.
+            // We return nil here to signify that this is not a Vungle banner, but an MREC ad.
+            return nil
+        case IABLeaderboardAdSize:
+            return .bannerLeaderboard
+        default:
+            return .banner
+        }
+    }
+    
+    /// A size for the Vungle banner/MREC ad container compatible with that specific Vungle ad type.
+    /// Note that this size must match Vungle's expectations or the ad rendering will fail.
+    /// See Vungle's documentation on banner ads: https://support.vungle.com/hc/en-us/articles/360048572771
+    /// See Vungle's documentation on MREC ads: https://support.vungle.com/hc/en-us/articles/360048079292
+    private var adContainerSize: CGSize {
+        switch vungleAdSize {
+        case nil:
+            // A nil vungleAdSize means the ad is not technically a Vungle banner, but a Vungle MREC ad.
+            // MREC ads must always have a size 300x250 per Vungle's documentation.
+            return IABMediumAdSize
+        case .banner:
+            return IABStandardAdSize
+        case .bannerShort:
+            return CGSize(width: 300, height: 50)
+        case .bannerLeaderboard:
+            return IABLeaderboardAdSize
+        case .unknown:
+            return IABStandardAdSize
+        @unknown default:
+            return IABStandardAdSize
+        }
     }
 }
 
@@ -106,19 +184,10 @@ extension VungleAdapterBannerAd {
             // Report load success
             DispatchQueue.main.async { [self] in
                 do {
-                    if let inlineView = inlineView {
-                        // Set the frame for the container.
-                        inlineView.frame = CGRect(origin: .zero, size: cgSize(for: vungleBannerSize(for: request.size)))
-                        // Attach vungle view to the inlineView container.
-                        try VungleSDK.shared().addAdView(to: inlineView, withOptions: [:], placementID: request.partnerPlacement)
-                        log(.loadSucceeded)
-                        loadCompletion?(.success([:])) ?? log(.loadResultIgnored)
-                    } else {
-                        // Fail if inlineView container is unavailable. This should never happen since it is set on load.
-                        let error = error(.loadFailureNoInlineView, description: "Vungle adapter inlineView is nil.", error: partnerError)
-                        log(.loadFailed(error))
-                        loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
-                    }
+                    // Attach vungle view to the inlineView container.
+                    try addVungleAdToContainer()
+                    log(.loadSucceeded)
+                    loadCompletion?(.success([:])) ?? log(.loadResultIgnored)
                 } catch {
                     // Fail to attach vungle view to inlineView container.
                     log(.loadFailed(error))
