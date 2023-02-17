@@ -68,39 +68,39 @@ extension VungleAdapterRouter {
         } else if let placementID = placementID {
             recordLoadEnd(forPlacement: placementID)
         }
-        ad(for: placementID, prioritizeVisibleBanner: false)?.vungleAdPlayabilityUpdate?(isAdPlayable, placementID: placementID, adMarkup: adMarkup, error: partnerError)
+        ad(for: placementID, adMarkup: adMarkup, prioritizeVisibleBanner: false)?.vungleAdPlayabilityUpdate?(isAdPlayable, placementID: placementID, adMarkup: adMarkup, error: partnerError)
     }
     
     func vungleWillShowAd(forPlacementID placementID: String?, adMarkup: String?) {
-        ad(for: placementID, prioritizeVisibleBanner: false)?.vungleWillShowAd?(forPlacementID: placementID, adMarkup: adMarkup)
+        ad(for: placementID, adMarkup: adMarkup, prioritizeVisibleBanner: false)?.vungleWillShowAd?(forPlacementID: placementID, adMarkup: adMarkup)
     }
     
     func vungleDidShowAd(forPlacementID placementID: String?, adMarkup: String?) {
-        ad(for: placementID, prioritizeVisibleBanner: false)?.vungleDidShowAd?(forPlacementID: placementID, adMarkup: adMarkup)
+        ad(for: placementID, adMarkup: adMarkup, prioritizeVisibleBanner: false)?.vungleDidShowAd?(forPlacementID: placementID, adMarkup: adMarkup)
     }
     
     func vungleAdViewed(forPlacementID placementID: String?, adMarkup: String?) {
-        ad(for: placementID, prioritizeVisibleBanner: false)?.vungleAdViewed?(forPlacementID: placementID, adMarkup: adMarkup)
+        ad(for: placementID, adMarkup: adMarkup, prioritizeVisibleBanner: false)?.vungleAdViewed?(forPlacementID: placementID, adMarkup: adMarkup)
     }
     
     func vungleTrackClick(forPlacementID placementID: String?, adMarkup: String?) {
-        ad(for: placementID, prioritizeVisibleBanner: true)?.vungleTrackClick?(forPlacementID: placementID, adMarkup: adMarkup)
+        ad(for: placementID, adMarkup: adMarkup, prioritizeVisibleBanner: true)?.vungleTrackClick?(forPlacementID: placementID, adMarkup: adMarkup)
     }
     
     func vungleWillLeaveApplication(forPlacementID placementID: String?, adMarkup: String?) {
-        ad(for: placementID, prioritizeVisibleBanner: true)?.vungleWillLeaveApplication?(forPlacementID: placementID, adMarkup: adMarkup)
+        ad(for: placementID, adMarkup: adMarkup, prioritizeVisibleBanner: true)?.vungleWillLeaveApplication?(forPlacementID: placementID, adMarkup: adMarkup)
     }
     
     func vungleWillCloseAd(forPlacementID placementID: String?, adMarkup: String?) {
-        ad(for: placementID, prioritizeVisibleBanner: true)?.vungleWillCloseAd?(forPlacementID: placementID, adMarkup: adMarkup)
+        ad(for: placementID, adMarkup: adMarkup, prioritizeVisibleBanner: true)?.vungleWillCloseAd?(forPlacementID: placementID, adMarkup: adMarkup)
     }
     
     func vungleDidCloseAd(forPlacementID placementID: String?, adMarkup: String?) {
-        ad(for: placementID, prioritizeVisibleBanner: true)?.vungleDidCloseAd?(forPlacementID: placementID, adMarkup: adMarkup)
+        ad(for: placementID, adMarkup: adMarkup, prioritizeVisibleBanner: true)?.vungleDidCloseAd?(forPlacementID: placementID, adMarkup: adMarkup)
     }
     
     func vungleRewardUser(forPlacementID placementID: String?, adMarkup: String?) {
-        ad(for: placementID, prioritizeVisibleBanner: true)?.vungleRewardUser?(forPlacementID: placementID, adMarkup: adMarkup)
+        ad(for: placementID, adMarkup: adMarkup, prioritizeVisibleBanner: true)?.vungleRewardUser?(forPlacementID: placementID, adMarkup: adMarkup)
     }
 }
 
@@ -162,12 +162,17 @@ extension VungleAdapterRouter {
 private extension VungleAdapterRouter {
     
     /// Fetches a stored ad adapter and logs an error if none is found.
-    func ad(for partnerPlacement: String?, prioritizeVisibleBanner: Bool, functionName: StaticString = #function) -> VungleSDKHBDelegate? {
+    func ad(for partnerPlacement: String?, adMarkup: String?, prioritizeVisibleBanner: Bool, functionName: StaticString = #function) -> VungleSDKHBDelegate? {
+        
+        func adMatchesPlacementAndMarkup(_ ad: PartnerAd) -> Bool {
+            ad.request.partnerPlacement == partnerPlacement && ad.request.adm == adMarkup
+        }
+        
         guard let partnerPlacement = partnerPlacement else {
             adapter.log("\(functionName) call ignored with nil placementID.")
             return nil
         }
-        guard let ad = adapter.storage.ads.last(where: { $0.request.partnerPlacement == partnerPlacement }) as? VungleAdapterAd else {
+        guard let ad = adapter.storage.ads.last(where: adMatchesPlacementAndMarkup) as? VungleAdapterAd else {
             adapter.log("\(functionName) call ignored with placementID \(partnerPlacement), no corresponding partner ad found.")
             return nil
         }
@@ -181,7 +186,7 @@ private extension VungleAdapterRouter {
         // It should work fine under the assumption that Chartboost Mediation does not support the creation of multiple banners with the same placement by publishers, which means
         // at a single point in time there should be at most two Vungle banners with the same placement loaded: the visible one and the preloaded one intended to replace it.
         if ad.request.format == .banner && prioritizeVisibleBanner {
-            let firstVisibleBanner = adapter.storage.ads.first(where: { $0.request.partnerPlacement == partnerPlacement && $0.inlineView?.window != nil }) as? VungleAdapterAd
+            let firstVisibleBanner = adapter.storage.ads.first(where: { adMatchesPlacementAndMarkup($0) && $0.inlineView?.window != nil }) as? VungleAdapterAd
             return firstVisibleBanner ?? ad
         }
         return ad
