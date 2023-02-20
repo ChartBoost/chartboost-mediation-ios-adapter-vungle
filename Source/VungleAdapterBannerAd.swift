@@ -12,7 +12,10 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
     
     /// The partner ad view to display inline. E.g. a banner view.
     /// Should be nil for full-screen ads.
-    var inlineView: UIView? = UIView()
+    var inlineView: UIView?
+    
+    /// Indicates if the Vungle banner was displayed with a successful call to Vungle SDK's `addAdView`.
+    private var adWasDisplayed = false
     
     /// Loads an ad.
     /// - parameter viewController: The view controller on which the ad will be presented on. Needed on load for some banners.
@@ -20,17 +23,32 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
     func load(with viewController: UIViewController?, completion: @escaping (Result<PartnerEventDetails, Error>) -> Void) {
         log(.loadStarted)
         
+        // Create Vungle banner container, which notifies us when the view is about to become visible so we can attach the Vungle view then.
+        //
+        // Note that a second Vungle banner may be loaded with the same placement as the one currently on display due to how
+        // Chartboost Mediation's auto-refresh feature works. If we were to call `Vungle.addAdView()` directly on load we could end up
+        // in a situation where two banners with the same placement have been added to their containers, and Vungle sometimes gets
+        // confused about which one of the two banners to clear when `finishDisplayingAd` is called for that placement. To avoid this
+        // situation we make sure that `addAdView` is only called for banners actually on display, which should be at most one per placement,
+        // which prevents `finishDisplayingAd` calls from affecting preloaded banners which have not been displayed yet.
+        inlineView = AdContainerView(onDisplay: { [weak self] in
+            guard let self = self, !self.adWasDisplayed else {
+                return
+            }
+            // Attach vungle view to the container
+            do {
+                try self.addVungleAdToContainer()
+                // Mark ad as displayed so we know if we need to mark it as finished later on `invalidate()`.
+                self.adWasDisplayed = true
+            } catch {
+                self.log("Failed to add Vungle banner to the container view with error: \(error)")
+            }
+        })
+        
         // If ad already loaded succeed immediately
         guard !adIsCachedByVungle else {
-            // Attach vungle view to the inlineView container.
-            do {
-                try addVungleAdToContainer()
-                log(.loadSucceeded)
-                completion(.success([:]))
-            } catch {
-                log(.loadFailed(error))
-                completion(.failure(error))
-            }
+            log(.loadSucceeded)
+            completion(.success([:]))
             return
         }
         
@@ -63,6 +81,18 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
     /// - parameter completion: Closure to be performed once the ad has been shown.
     func show(with viewController: UIViewController, completion: @escaping (Result<PartnerEventDetails, Error>) -> Void) {
         /// NO-OP
+    }
+    
+    /// Invalidates a loaded ad.
+    /// Chartboost Mediation SDK calls this method right before disposing of an ad.
+    ///
+    /// A default implementation is provided that does nothing.
+    /// Only implement if there is some special cleanup required by the partner SDK before disposing of the ad instance.
+    func invalidate() throws {
+        if adWasDisplayed {
+            finishDisplayingVungleAd()
+        }
+        log(.invalidateSucceeded)
     }
     
     /// Indicates if the Vungle SDK has an ad already cached for this placement.
@@ -121,13 +151,23 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
         // Set the frame for the container.
         inlineView.frame = CGRect(origin: .zero, size: adContainerSize)
         
-        // Attach vungle view to the inlineView container.
+        // Attach vungle view to the container.
         if let adm = request.adm {
             // Programmatic
             try VungleSDK.shared().addAdView(to: inlineView, withOptions: [:], placementID: request.partnerPlacement, adMarkup: adm)
         } else {
             // Non-programmatic
             try VungleSDK.shared().addAdView(to: inlineView, withOptions: [:], placementID: request.partnerPlacement)
+        }
+    }
+    
+    private func finishDisplayingVungleAd() {
+        // Programmatic
+        if let adm = request.adm {
+            VungleSDK.shared().finishDisplayingAd(request.partnerPlacement, adMarkup: adm)
+        } else {
+        // Non-programmatic
+            VungleSDK.shared().finishDisplayingAd(request.partnerPlacement)
         }
     }
     
@@ -182,27 +222,15 @@ extension VungleAdapterBannerAd {
         }
         if isAdPlayable {
             // Report load success
-            DispatchQueue.main.async { [self] in
-                do {
-                    // Attach vungle view to the inlineView container.
-                    try addVungleAdToContainer()
-                    log(.loadSucceeded)
-                    loadCompletion?(.success([:])) ?? log(.loadResultIgnored)
-                } catch {
-                    // Fail to attach vungle view to inlineView container.
-                    log(.loadFailed(error))
-                    loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
-                }
-                
-                loadCompletion = nil
-            }
+            log(.loadSucceeded)
+            loadCompletion?(.success([:])) ?? log(.loadResultIgnored)
         } else {
             // Report load failure
             let error = partnerError ?? error(.loadFailureUnknown)
             log(.loadFailed(error))
             loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
-            loadCompletion = nil
         }
+        loadCompletion = nil
     }
     
     func vungleWillShowAd(forPlacementID placementID: String?, adMarkup: String?) {
@@ -239,5 +267,34 @@ extension VungleAdapterBannerAd {
     
     func vungleRewardUser(forPlacementID placementID: String?, adMarkup: String?) {
         log(.delegateCallIgnored)
+    }
+}
+
+private extension VungleAdapterBannerAd {
+    
+    /// A view container that notifies the ad when it is about to be attached to the app's view hierarchy.
+    /// It helps us prevent unnecessary calls to `Vungle.addAdView()` and `Vungle.finishDisplayingAd()` for preloaded ads that
+    /// are not to be displayed yet.
+    class AdContainerView: UIView {
+        
+        let onDisplay: () -> Void
+        
+        init(onDisplay: @escaping () -> Void) {
+            self.onDisplay = onDisplay
+            super.init(frame: .zero)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        // This is called when added as a subview of a visible Chartboost Mediation banner by the Chartboost Mediation SDK.
+        override func willMove(toWindow newWindow: UIWindow?) {
+            super.willMove(toWindow: newWindow)
+            
+            if newWindow != nil {
+                onDisplay()
+            }
+        }
     }
 }
