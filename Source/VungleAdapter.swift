@@ -140,12 +140,17 @@ final class VungleAdapter: PartnerAdapter {
             throw error(.loadFailureLoadInProgress)
         }
         switch request.format {
-        case .interstitial, .rewarded, .rewardedInterstitial:
+        case .interstitial, .rewarded:
             return VungleAdapterFullscreenAd(adapter: self, router: router, request: request, delegate: delegate)
         case .banner:
             return VungleAdapterBannerAd(adapter: self, router: router, request: request, delegate: delegate)
         default:
-            throw error(.loadFailureUnsupportedAdFormat)
+            // Not using the `.rewardedInterstitial` case directly to maintain backward compatibility with Chartboost Mediation 4.0
+            if request.format.rawValue == "rewardedInterstitial" {
+                return VungleAdapterFullscreenAd(adapter: self, router: router, request: request, delegate: delegate)
+            } else {
+                throw error(.loadFailureUnsupportedAdFormat)
+            }
         }
     }
     
