@@ -131,11 +131,7 @@ final class VungleAdapter: PartnerAdapter {
             throw error(.loadFailurePartnerNotInitialized, description: "router was nil on makeAd()")
         }
         // Vungle does not support multiple loads for the same placement (they will result in only one ad loaded).
-        // We make an exception for banners where there is little downside (this can end up causing show failures for full-screen ads,
-        // but not so for banners) and prevents banner auto-refresh from stalling in case Vungle won bids repeatedly with the same placement.
-        guard !storage.ads.contains(where: { $0.request.partnerPlacement == request.partnerPlacement })
-            || request.format == .banner
-        else {
+        guard !storage.ads.contains(where: { $0.request.partnerPlacement == request.partnerPlacement }) else {
             log("Failed to load ad for already loading placement \(request.partnerPlacement)")
             throw error(.loadFailureLoadInProgress)
         }
