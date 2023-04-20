@@ -140,7 +140,7 @@ final class VungleAdapter: PartnerAdapter {
             return VungleAdapterFullscreenAd(adapter: self, router: router, request: request, delegate: delegate)
         case .banner:
             return VungleAdapterBannerAd(adapter: self, router: router, request: request, delegate: delegate)
-        @unknown default:
+        default:
             throw error(.loadFailureUnsupportedAdFormat)
         }
     }
