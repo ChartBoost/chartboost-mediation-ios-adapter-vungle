@@ -16,7 +16,7 @@ final class VungleAdapter: PartnerAdapter {
     /// The version of the adapter.
     /// It should have either 5 or 6 digits separated by periods, where the first digit is Chartboost Mediation SDK's major version, the last digit is the adapter's build version, and intermediate digits are the partner SDK's version.
     /// Format: `<Chartboost Mediation major version>.<Partner major version>.<Partner minor version>.<Partner patch version>.<Partner build version>.<Adapter build version>` where `.<Partner build version>` is optional.
-    let adapterVersion = "4.6.12.2.1"
+    let adapterVersion = "4.6.12.3.1"
     
     /// The partner's unique identifier.
     let partnerIdentifier = "vungle"
@@ -131,11 +131,7 @@ final class VungleAdapter: PartnerAdapter {
             throw error(.loadFailurePartnerNotInitialized, description: "router was nil on makeAd()")
         }
         // Vungle does not support multiple loads for the same placement (they will result in only one ad loaded).
-        // We make an exception for banners where there is little downside (this can end up causing show failures for full-screen ads,
-        // but not so for banners) and prevents banner auto-refresh from stalling in case Vungle won bids repeatedly with the same placement.
-        guard !storage.ads.contains(where: { $0.request.partnerPlacement == request.partnerPlacement })
-            || request.format == .banner
-        else {
+        guard !storage.ads.contains(where: { $0.request.partnerPlacement == request.partnerPlacement }) else {
             log("Failed to load ad for already loading placement \(request.partnerPlacement)")
             throw error(.loadFailureLoadInProgress)
         }
