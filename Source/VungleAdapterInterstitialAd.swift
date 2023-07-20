@@ -72,7 +72,7 @@ extension VungleAdapterInterstitialAd: VungleInterstitialDelegate {
 
     // Ad Lifecycle Events
     func interstitialAdWillPresent(_ interstitial: VungleInterstitial) {
-        log(.showStarted)
+        log(.delegateCallIgnored)
     }
 
     func interstitialAdDidPresent(_ interstitial: VungleInterstitial) {
