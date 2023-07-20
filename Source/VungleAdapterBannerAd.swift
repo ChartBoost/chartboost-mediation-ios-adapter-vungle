@@ -10,7 +10,8 @@ import VungleAdsSDK
 /// Chartboost Mediation Vungle adapter banner ad.
 final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
 
-    var ad: VungleBanner?
+    /// Holds a refernce to the Vungle ad between the time load() exits and the delegate is called
+    private var ad: VungleBanner?
 
     /// The partner ad view to display inline. E.g. a banner view.
     /// Should be nil for full-screen ads.
@@ -26,10 +27,11 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
         log(.loadStarted)
         loadCompletion = completion
 
-        ad = VungleBanner(placementId: request.partnerPlacement, size: self.vungleAdSize)
-        ad?.delegate = self
+        let banner = VungleBanner(placementId: request.partnerPlacement, size: self.vungleAdSize)
+        ad = banner
+        banner.delegate = self
         // If the adm is nil, that's the same as telling it to load a non-programatic ad
-        ad?.load(request.adm)
+        banner.load(request.adm)
     }
 
     /// Shows a loaded ad.
@@ -73,15 +75,8 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
         log(.loadSucceeded)
         loadCompletion?(.success([:])) ?? log(.loadResultIgnored)
 
-        // Check that the ad object is non-nil
-        guard let ad = self.ad else {
-            let error = error(.showFailureAdNotFound)
-            log(.showFailed(error))
-            return
-        }
-
         // Check that the ad is ready
-        guard ad.canPlayAd() == true else {
+        guard banner.canPlayAd() == true else {
             let error = error(.showFailureAdNotReady)
             log(.showFailed(error))
             return
@@ -103,7 +98,7 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
 
         // View must be set to the same size as the ad
         inlineView.frame = CGRect(origin: .zero, size: size)
-        ad.present(on: inlineView)
+        banner.present(on: inlineView)
     }
 
     func bannerAdDidFailToLoad(_ banner: VungleBanner, withError: NSError) {
