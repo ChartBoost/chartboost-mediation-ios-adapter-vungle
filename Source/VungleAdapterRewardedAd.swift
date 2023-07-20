@@ -72,7 +72,7 @@ extension VungleAdapterRewardedAd: VungleRewardedDelegate {
 
     // Ad Lifecycle Events
     func rewardedAdWillPresent(_ rewarded: VungleRewarded) {
-        log(.delegateCallIgnored)
+        log(.showStarted)
     }
 
     func rewardedAdDidPresent(_ rewarded: VungleRewarded) {

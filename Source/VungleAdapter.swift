@@ -25,22 +25,12 @@ final class VungleAdapter: PartnerAdapter {
     
     /// The human-friendly partner name.
     let partnerDisplayName = "Vungle"
-        
-//    /// The completion handler to notify Chartboost Mediation of partner setup completion result.
-//    private var setUpCompletion: ((Error?) -> Void)?
-    
-    /// Ad storage managed by Chartboost Mediation SDK.
-//    let storage: PartnerAdapterStorage
-    
-    /// A router that forwards Vungle delegate calls to the corresponding `PartnerAd` instances.
-//    private var router: VungleAdapterRouter?
     
     /// The designated initializer for the adapter.
     /// Chartboost Mediation SDK will use this constructor to create instances of conforming types.
     /// - parameter storage: An object that exposes storage managed by the Chartboost Mediation SDK to the adapter.
     /// It includes a list of created `PartnerAd` instances. You may ignore this parameter if you don't need it.
     init(storage: PartnerAdapterStorage) {
-//        self.storage = storage
     }
     
     /// Does any setup needed before beginning to load ads.
@@ -62,8 +52,7 @@ final class VungleAdapter: PartnerAdapter {
         let savedCOPPASetting = UserDefaults.standard.bool(forKey: COPPA_KEY)
         VunglePrivacySettings.setCOPPAStatus(savedCOPPASetting)
         // Initialize Vungle
-//        VungleAds.initWithAppId(appId) { initError in
-        VungleAds.initWithAppId("bad-id") { initError in
+        VungleAds.initWithAppId(appId) { initError in
             if (VungleAds.isInitialized()) {
                 self.log(.setUpSucceded)
                 completion(nil)
@@ -80,7 +69,10 @@ final class VungleAdapter: PartnerAdapter {
     /// - parameter completion: Closure to be performed with the fetched info.
     func fetchBidderInformation(request: PreBidRequest, completion: @escaping ([String : String]?) -> Void) {
         log(.fetchBidderInfoStarted(request))
-        completion(["bid_token":VungleAds.getBiddingToken()])
+        let bidToken = VungleAds.getBiddingToken()
+        // getBiddingToken returns an non-optional string and no failure case is documented
+        log(.fetchBidderInfoSucceeded(request))
+        completion(["bid_token":bidToken])
     }
     
     /// Indicates if GDPR applies or not and the user's GDPR consent status.
@@ -122,6 +114,7 @@ final class VungleAdapter: PartnerAdapter {
     /// - parameter request: Information about the ad load request.
     /// - parameter delegate: The delegate that will receive ad life-cycle notifications.
     func makeAd(request: PartnerAdLoadRequest, delegate: PartnerAdDelegate) throws -> PartnerAd {
+        // As of 7.0.0, Vungle now supports multiple loads of the same placement
         switch request.format {
         case .banner:
             return VungleAdapterBannerAd(adapter: self, request: request, delegate: delegate)
