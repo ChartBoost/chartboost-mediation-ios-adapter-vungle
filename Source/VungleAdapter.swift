@@ -52,7 +52,8 @@ final class VungleAdapter: PartnerAdapter {
         let savedCOPPASetting = UserDefaults.standard.bool(forKey: COPPA_KEY)
         VunglePrivacySettings.setCOPPAStatus(savedCOPPASetting)
         // Initialize Vungle
-        VungleAds.initWithAppId(appID) { initError in
+        VungleAds.initWithAppId(appID) { [weak self] initError in
+            guard let self = self else { return }
             if VungleAds.isInitialized() {
                 self.log(.setUpSucceded)
                 completion(nil)
