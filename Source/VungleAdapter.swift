@@ -57,7 +57,7 @@ final class VungleAdapter: PartnerAdapter {
                 self.log(.setUpSucceded)
                 completion(nil)
             } else {
-                let error = initError ?? self.error(.initializationFailureUnknown, description: nil, error: nil)
+                let error = initError ?? self.error(.initializationFailureUnknown)
                 self.log(.setUpFailed(error))
                 completion(error)
             }
