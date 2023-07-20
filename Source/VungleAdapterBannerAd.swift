@@ -68,7 +68,6 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
 }
 
 // MARK: - VungleBannerDelegate
-
 extension VungleAdapterBannerAd: VungleBannerDelegate {
     func bannerAdDidLoad(_ banner: VungleBanner) {
         log(.loadSucceeded)
@@ -115,17 +114,15 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
 
     // Ad Lifecycle Events
     func bannerAdWillPresent(_ banner: VungleBanner) {
-        log(.delegateCallIgnored)
+        log(.showStarted)
     }
 
     func bannerAdDidPresent(_ banner: VungleBanner) {
         log(.showSucceeded)
-        showCompletion?(.success([:])) ?? log(.showResultIgnored)
     }
 
     func bannerAdDidFailToPresent(_ banner: VungleBanner, withError: NSError) {
         log(.showFailed(withError))
-        showCompletion?(.failure(withError)) ?? log(.showResultIgnored)
     }
 
     func bannerAdDidTrackImpression(_ banner: VungleBanner) {
