@@ -40,7 +40,7 @@ final class VungleAdapter: PartnerAdapter {
         log(.setUpStarted)
         
         // Get credentials, fail early if they are unavailable
-        guard let appId = configuration.credentials[.appIDKey] as? String, !appId.isEmpty else {
+        guard let appID = configuration.credentials[.appIDKey] as? String, !appID.isEmpty else {
             let error = self.error(.initializationFailureInvalidCredentials, description: "Missing \(String.appIDKey)")
             self.log(.setUpFailed(error))
             completion(error)
@@ -52,7 +52,7 @@ final class VungleAdapter: PartnerAdapter {
         let savedCOPPASetting = UserDefaults.standard.bool(forKey: COPPA_KEY)
         VunglePrivacySettings.setCOPPAStatus(savedCOPPASetting)
         // Initialize Vungle
-        VungleAds.initWithAppId(appId) { initError in
+        VungleAds.initWithAppId(appID) { initError in
             if (VungleAds.isInitialized()) {
                 self.log(.setUpSucceded)
                 completion(nil)
