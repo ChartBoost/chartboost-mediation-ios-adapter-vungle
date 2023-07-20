@@ -5,10 +5,11 @@
 
 import ChartboostMediationSDK
 import Foundation
-import VungleSDK
+import VungleAdsSDK
 
 /// Base class for Chartboost Mediation Vungle adapter ads.
-class VungleAdapterAd: NSObject, VungleSDKHBDelegate {
+//class VungleAdapterAd: NSObject, VungleSDKHBDelegate {
+class VungleAdapterAd: NSObject {
 
     /// The partner adapter that created this ad.
     let adapter: PartnerAdapter
@@ -27,12 +28,8 @@ class VungleAdapterAd: NSObject, VungleSDKHBDelegate {
     /// The completion for the ongoing show operation.
     var showCompletion: ((Result<PartnerEventDetails, Error>) -> Void)?
     
-    /// The Vungle adapter router which keeps track of loading placements.
-    let router: VungleAdapterRouter
-    
-    init(adapter: PartnerAdapter, router: VungleAdapterRouter, request: PartnerAdLoadRequest, delegate: PartnerAdDelegate) {
+    init(adapter: PartnerAdapter, request: PartnerAdLoadRequest, delegate: PartnerAdDelegate) {
         self.adapter = adapter
-        self.router = router
         self.request = request
         self.delegate = delegate
     }
