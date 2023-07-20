@@ -53,7 +53,7 @@ final class VungleAdapter: PartnerAdapter {
         VunglePrivacySettings.setCOPPAStatus(savedCOPPASetting)
         // Initialize Vungle
         VungleAds.initWithAppId(appID) { initError in
-            if (VungleAds.isInitialized()) {
+            if VungleAds.isInitialized() {
                 self.log(.setUpSucceded)
                 completion(nil)
             } else {
