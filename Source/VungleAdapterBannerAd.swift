@@ -78,6 +78,7 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
             let error = error(.showFailureAdNotReady)
             log(.loadFailed(error))
             loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
+            loadCompletion = nil
             return
         }
 
@@ -86,6 +87,7 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
             let error = error(.loadFailureNoInlineView, description: "Vungle adapter inlineView is nil.")
             log(.loadFailed(error))
             loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
+            loadCompletion = nil
             return
         }
 
@@ -94,12 +96,14 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
             let error = error(.loadFailureInvalidAdRequest, description: "No size was specified.")
             log(.loadFailed(error))
             loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
+            loadCompletion = nil
             return
         }
 
         // All checks passed
         log(.loadSucceeded)
         loadCompletion?(.success([:])) ?? log(.loadResultIgnored)
+        loadCompletion = nil
 
         // View must be set to the same size as the ad
         inlineView.frame = CGRect(origin: .zero, size: size)
