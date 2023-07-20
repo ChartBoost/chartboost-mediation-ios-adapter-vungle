@@ -72,7 +72,7 @@ final class VungleAdapter: PartnerAdapter {
         let bidToken = VungleAds.getBiddingToken()
         // getBiddingToken returns an non-optional string and no failure case is documented
         log(.fetchBidderInfoSucceeded(request))
-        completion(["bid_token":bidToken])
+        completion(["bid_token": bidToken])
     }
     
     /// Indicates if GDPR applies or not and the user's GDPR consent status.
