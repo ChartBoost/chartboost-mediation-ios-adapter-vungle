@@ -72,29 +72,34 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
 // MARK: - VungleBannerDelegate
 extension VungleAdapterBannerAd: VungleBannerDelegate {
     func bannerAdDidLoad(_ banner: VungleBanner) {
-        log(.loadSucceeded)
-        loadCompletion?(.success([:])) ?? log(.loadResultIgnored)
 
         // Check that the ad is ready
         guard banner.canPlayAd() == true else {
             let error = error(.showFailureAdNotReady)
-            log(.showFailed(error))
+            log(.loadFailed(error))
+            loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
             return
         }
 
         // Fail if inlineView container is unavailable. This should never happen since it is set on load.
         guard let inlineView = inlineView else {
             let error = error(.loadFailureNoInlineView, description: "Vungle adapter inlineView is nil.")
-            log(.showFailed(error))
+            log(.loadFailed(error))
+            loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
             return
         }
 
         // Fail if ad size is missing from request. This should never happen.
         guard let size = request.size else {
             let error = error(.loadFailureInvalidAdRequest, description: "No size was specified.")
-            log(.showFailed(error))
+            log(.loadFailed(error))
+            loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
             return
         }
+
+        // All checks passed
+        log(.loadSucceeded)
+        loadCompletion?(.success([:])) ?? log(.loadResultIgnored)
 
         // View must be set to the same size as the ad
         inlineView.frame = CGRect(origin: .zero, size: size)
