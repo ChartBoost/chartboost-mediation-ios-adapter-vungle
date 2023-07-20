@@ -10,7 +10,8 @@ import VungleAdsSDK
 /// Chartboost Mediation Vungle adapter fullscreen ad.
 final class VungleAdapterRewardedAd: VungleAdapterAd, PartnerAd {
 
-    var ad: VungleRewarded?
+    /// Holds a refernce to the Vungle ad between the time load() exits and the delegate is called
+    private var ad: VungleRewarded?
 
     /// The partner ad view to display inline. E.g. a banner view.
     /// Should be nil for full-screen ads.
@@ -24,10 +25,11 @@ final class VungleAdapterRewardedAd: VungleAdapterAd, PartnerAd {
 
         loadCompletion = completion
 
-        ad = VungleRewarded(placementId: request.partnerPlacement)
-        ad?.delegate = self
+        let rewarded = VungleRewarded(placementId: request.partnerPlacement)
+        ad = rewarded
+        rewarded.delegate = self
         // If the adm is nil, that's the same as telling it to load a non-programatic ad
-        ad?.load(request.adm)
+        rewarded.load(request.adm)
     }
 
     /// Shows a loaded ad.
@@ -78,11 +80,13 @@ extension VungleAdapterRewardedAd: VungleRewardedDelegate {
     func rewardedAdDidPresent(_ rewarded: VungleRewarded) {
         log(.showSucceeded)
         showCompletion?(.success([:])) ?? log(.showResultIgnored)
+        showCompletion = nil
     }
 
     func rewardedAdDidFailToPresent(_ rewarded: VungleRewarded, withError: NSError) {
         log(.showFailed(withError))
         showCompletion?(.failure(withError)) ?? log(.showResultIgnored)
+        showCompletion = nil
     }
 
     func rewardedAdDidTrackImpression(_ rewarded: VungleRewarded) {

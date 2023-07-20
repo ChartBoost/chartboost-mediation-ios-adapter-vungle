@@ -10,7 +10,8 @@ import VungleAdsSDK
 /// Chartboost Mediation Vungle adapter fullscreen ad.
 final class VungleAdapterInterstitialAd: VungleAdapterAd, PartnerAd {
 
-    var ad: VungleInterstitial?
+    /// Holds a refernce to the Vungle ad between the time load() exits and the delegate is called
+    private var ad: VungleInterstitial?
     
     /// The partner ad view to display inline. E.g. a banner view.
     /// Should be nil for full-screen ads.
@@ -24,10 +25,11 @@ final class VungleAdapterInterstitialAd: VungleAdapterAd, PartnerAd {
         
         loadCompletion = completion
 
-        ad = VungleInterstitial(placementId: request.partnerPlacement)
-        ad?.delegate = self
+        let interstitial = VungleInterstitial(placementId: request.partnerPlacement)
+        ad = interstitial
+        interstitial.delegate = self
         // If the adm is nil, that's the same as telling it to load a non-programatic ad
-        ad?.load(request.adm)
+        interstitial.load(request.adm)
     }
     
     /// Shows a loaded ad.
@@ -78,11 +80,13 @@ extension VungleAdapterInterstitialAd: VungleInterstitialDelegate {
     func interstitialAdDidPresent(_ interstitial: VungleInterstitial) {
         log(.showSucceeded)
         showCompletion?(.success([:])) ?? log(.showResultIgnored)
+        showCompletion = nil
     }
 
     func interstitialAdDidFailToPresent(_ interstitial: VungleInterstitial, withError: NSError) {
         log(.showFailed(withError))
         showCompletion?(.failure(withError)) ?? log(.showResultIgnored)
+        showCompletion = nil
     }
 
     func interstitialAdDidTrackImpression(_ interstitial: VungleInterstitial) {
