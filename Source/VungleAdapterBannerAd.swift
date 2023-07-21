@@ -42,14 +42,6 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
         /// NO-OP
     }
 
-    /// Invalidates a loaded ad.
-    /// Chartboost Mediation SDK calls this method right before disposing of an ad.
-    ///
-    /// A default implementation is provided that does nothing.
-    /// Only implement if there is some special cleanup required by the partner SDK before disposing of the ad instance.
-    func invalidate() throws {
-    }
-
     /// Mapping of the request ad size to Vungle's ad size type. Nil means a MREC banner.
     private var vungleAdSize: BannerSize {
         switch request.size {
@@ -75,7 +67,7 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
 
         // Check that the ad is ready
         guard banner.canPlayAd() == true else {
-            let error = error(.showFailureAdNotReady)
+            let error = error(.loadFailureUnknown, description: "Unable to play ad.")
             log(.loadFailed(error))
             loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
             loadCompletion = nil
