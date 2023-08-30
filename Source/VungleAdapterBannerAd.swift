@@ -27,7 +27,14 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
         log(.loadStarted)
         loadCompletion = completion
 
-        let banner = VungleBanner(placementId: request.partnerPlacement, size: self.vungleAdSize)
+        // Fail if we cannot fit a fixed size banner in the requested size.
+        guard let (_, vungleSize) = fixedBannerSize(for: request.size ?? IABStandardAdSize) else {
+            let error = error(.loadFailureInvalidBannerSize)
+            log(.loadFailed(error))
+            return completion(.failure(error))
+        }
+
+        let banner = VungleBanner(placementId: request.partnerPlacement, size: vungleSize)
         ad = banner
         banner.delegate = self
         // If the adm is nil, that's the same as telling it to load a non-programatic ad
@@ -40,24 +47,6 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
     /// - parameter completion: Closure to be performed once the ad has been shown.
     func show(with viewController: UIViewController, completion: @escaping (Result<PartnerEventDetails, Error>) -> Void) {
         /// NO-OP
-    }
-
-    /// Mapping of the request ad size to Vungle's ad size type. Nil means a MREC banner.
-    private var vungleAdSize: BannerSize {
-        switch request.size {
-        case IABStandardAdSize:
-            return BannerSize.regular
-        case CGSize(width: 300, height: 50):
-            return BannerSize.short
-        case IABLeaderboardAdSize:
-            return BannerSize.leaderboard
-        case IABMediumAdSize:
-            return BannerSize.mrec
-        default:
-            log("Unrecognized banner size.")
-            // Ad is unlikely to load if the size doesn't match, but we need to return something
-            return BannerSize.regular
-        }
     }
 }
 
@@ -84,7 +73,8 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
         }
 
         // Fail if ad size is missing from request. This should never happen.
-        guard let size = request.size else {
+        guard let requestSize = request.size,
+              let (size, _) = fixedBannerSize(for: requestSize) else {
             let error = error(.loadFailureInvalidAdRequest, description: "No size was specified.")
             log(.loadFailed(error))
             loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
@@ -94,7 +84,13 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
 
         // All checks passed
         log(.loadSucceeded)
-        loadCompletion?(.success([:])) ?? log(.loadResultIgnored)
+
+        let partnerDetails = [
+            "bannerWidth": "\(size.width)",
+            "bannerHeight": "\(size.height)",
+            "bannerType": "0" // Fixed banner
+        ]
+        loadCompletion?(.success(partnerDetails)) ?? log(.loadResultIgnored)
         loadCompletion = nil
 
         // View must be set to the same size as the ad
@@ -142,5 +138,26 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
     func bannerAdDidClose(_ banner: VungleBanner) {
         log(.didDismiss(error: nil))
         delegate?.didDismiss(self, details: [:], error: nil) ?? log(.delegateUnavailable)
+    }
+}
+
+// MARK: - Helpers
+extension VungleAdapterBannerAd {
+    private func fixedBannerSize(for requestedSize: CGSize) -> (size: CGSize, partnerSize: BannerSize)? {
+        let sizes: [(size: CGSize, partnerSize: BannerSize)] = [
+            (size: IABLeaderboardAdSize, partnerSize: .leaderboard),
+            (size: IABMediumAdSize, partnerSize: .mrec),
+            (size: IABStandardAdSize, partnerSize: .regular)
+        ]
+        // Find the largest size that can fit in the requested size.
+        for (size, partnerSize) in sizes {
+            // If height is 0, the pub has requested an ad of any height, so only the width matters.
+            if requestedSize.width >= size.width &&
+                (size.height == 0 || requestedSize.height >= size.height) {
+                return (size, partnerSize)
+            }
+        }
+        // The requested size cannot fit any fixed size banners.
+        return nil
     }
 }

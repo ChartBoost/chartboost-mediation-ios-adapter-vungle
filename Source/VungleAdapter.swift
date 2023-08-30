@@ -124,9 +124,11 @@ final class VungleAdapter: PartnerAdapter {
         case .rewarded:
             return VungleAdapterRewardedAd(adapter: self, request: request, delegate: delegate)
         default:
-            // Not using the `.rewardedInterstitial` case directly to maintain backward compatibility with Chartboost Mediation 4.0
+            // Not using the `.rewardedInterstitial` or `.adaptiveBanner` cases directly to maintain backward compatibility with Chartboost Mediation 4.0
             if request.format.rawValue == "rewarded_interstitial" {
                 return VungleAdapterRewardedAd(adapter: self, request: request, delegate: delegate)
+            } else if request.format.rawValue == "adaptive_banner" {
+                return VungleAdapterBannerAd(adapter: self, request: request, delegate: delegate)
             } else {
                 throw error(.loadFailureUnsupportedAdFormat)
             }
