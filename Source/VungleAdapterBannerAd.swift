@@ -143,7 +143,7 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
 
 // MARK: - Helpers
 extension VungleAdapterBannerAd {
-    private func fixedBannerSize(for requestedSize: CGSize) -> (size: CGSize, partnerSize: BannerSize)? {
+    private func fixedBannerSize(for requestedSize: CGSize) -> (size: CGSize, partnerSize: VungleAdsSDK.BannerSize)? {
         let sizes: [(size: CGSize, partnerSize: BannerSize)] = [
             (size: IABLeaderboardAdSize, partnerSize: .leaderboard),
             (size: IABMediumAdSize, partnerSize: .mrec),
