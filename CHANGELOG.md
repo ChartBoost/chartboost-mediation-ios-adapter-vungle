@@ -4,7 +4,7 @@ Note the first digit of every adapter version corresponds to the major version o
 Adapters are compatible with any Chartboost Mediation SDK version within that major version.
 
 ### 4.7.3.0.0
-- This version of the adapter has been certified with VungleAds 7.3.0.
+- This version of the adapter has been certified with VungleAds 7.3.0. Minimum deployment target is now 12.0.
 
 ### 4.7.2.0.0
 - This version of the adapter has been certified with VungleAds 7.2.0.
