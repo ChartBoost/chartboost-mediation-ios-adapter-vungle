@@ -10,7 +10,7 @@ env:
 
 jobs:
   release-adapter:
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - uses: chartboost/chartboost-mediation-ios-actions/release-adapter@v1
         with:
