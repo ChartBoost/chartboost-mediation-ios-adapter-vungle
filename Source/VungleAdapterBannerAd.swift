@@ -32,7 +32,7 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
         loadCompletion = completion
 
         // Fail if we cannot fit a fixed size banner in the requested size.
-        guard let (_, vungleSize) = fixedBannerSize(for: request.size ?? IABStandardAdSize) else {
+        guard let (_, vungleSize) = fixedBannerSize(for: request.bannerSize) else {
             let error = error(.loadFailureInvalidBannerSize)
             log(.loadFailed(error))
             return completion(.failure(error))
@@ -77,7 +77,7 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
         }
 
         // Fail if ad size is missing from request. This should never happen.
-        guard let requestSize = request.size,
+        guard let requestSize = request.bannerSize,
               let (size, _) = fixedBannerSize(for: requestSize) else {
             let error = error(.loadFailureInvalidAdRequest, description: "No size was specified.")
             log(.loadFailed(error))
@@ -144,7 +144,10 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
 
 // MARK: - Helpers
 extension VungleAdapterBannerAd {
-    private func fixedBannerSize(for requestedSize: CGSize) -> (size: CGSize, partnerSize: VungleAdsSDK.BannerSize)? {
+    private func fixedBannerSize(for requestedSize: ChartboostMediationSDK.BannerSize?) -> (size: CGSize, partnerSize: VungleAdsSDK.BannerSize)? {
+        guard let requestedSize else {
+            return (IABStandardAdSize, .regular)
+        }
         let sizes: [(size: CGSize, partnerSize: VungleAdsSDK.BannerSize)] = [
             (size: IABLeaderboardAdSize, partnerSize: .leaderboard),
             (size: IABMediumAdSize, partnerSize: .mrec),
@@ -153,8 +156,8 @@ extension VungleAdapterBannerAd {
         // Find the largest size that can fit in the requested size.
         for (size, partnerSize) in sizes {
             // If height is 0, the pub has requested an ad of any height, so only the width matters.
-            if requestedSize.width >= size.width &&
-                (size.height == 0 || requestedSize.height >= size.height) {
+            if requestedSize.size.width >= size.width &&
+                (size.height == 0 || requestedSize.size.height >= size.height) {
                 return (size, partnerSize)
             }
         }
