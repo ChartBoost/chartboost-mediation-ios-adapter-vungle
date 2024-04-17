@@ -116,7 +116,7 @@ final class VungleAdapter: PartnerAdapter {
     func makeAd(request: PartnerAdLoadRequest, delegate: PartnerAdDelegate) throws -> PartnerAd {
         // As of 7.0.0, Vungle now supports multiple loads of the same placement
         switch request.format {
-        case PartnerAdFormats.banner, PartnerAdFormats.adaptiveBanner:
+        case PartnerAdFormats.banner:
             return VungleAdapterBannerAd(adapter: self, request: request, delegate: delegate)
         case PartnerAdFormats.interstitial:
             return VungleAdapterInterstitialAd(adapter: self, request: request, delegate: delegate)
