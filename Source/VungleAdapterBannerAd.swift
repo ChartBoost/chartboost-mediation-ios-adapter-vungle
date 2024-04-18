@@ -8,18 +8,16 @@ import Foundation
 import VungleAdsSDK
 
 /// Chartboost Mediation Vungle adapter banner ad.
-final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
+final class VungleAdapterBannerAd: VungleAdapterAd, PartnerBannerAd {
 
     /// Holds a refernce to the Vungle ad between the time load() exits and the delegate is called
     private var ad: VungleBanner?
 
-    /// The partner ad view to display inline. E.g. a banner view.
-    /// Should be nil for full-screen ads.
-    var inlineView: UIView? = UIView()
+    /// The partner banner ad view to display.
+    var view: UIView? = UIView()
 
     /// The loaded partner ad banner size.
-    /// Should be `nil` for full-screen ads.
-    var bannerSize: PartnerBannerSize?
+    var size: PartnerBannerSize?
 
     /// Indicates if the Vungle banner was displayed with a successful call to Vungle SDK's `addAdView`.
     private var adWasDisplayed = false
@@ -32,7 +30,7 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
         loadCompletion = completion
 
         // Fail if we cannot fit a fixed size banner in the requested size.
-        guard let (_, vungleSize) = fixedBannerSize(for: request.bannerSize) else {
+        guard let (loadedSize, vungleSize) = fixedBannerSize(for: request.bannerSize) else {
             let error = error(.loadFailureInvalidBannerSize)
             log(.loadFailed(error))
             return completion(.failure(error))
@@ -40,6 +38,7 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
 
         let banner = VungleBanner(placementId: request.partnerPlacement, size: vungleSize)
         ad = banner
+        size = PartnerBannerSize(size: loadedSize, type: .fixed)
         banner.delegate = self
         // If the adm is nil, that's the same as telling it to load a non-programatic ad
         banner.load(request.adm)
@@ -68,18 +67,8 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
         }
 
         // Fail if inlineView container is unavailable. This should never happen since it is set on load.
-        guard let inlineView = inlineView else {
+        guard let view else {
             let error = error(.loadFailureNoInlineView, description: "Vungle adapter inlineView is nil.")
-            log(.loadFailed(error))
-            loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
-            loadCompletion = nil
-            return
-        }
-
-        // Fail if ad size is missing from request. This should never happen.
-        guard let requestSize = request.bannerSize,
-              let (size, _) = fixedBannerSize(for: requestSize) else {
-            let error = error(.loadFailureInvalidAdRequest, description: "No size was specified.")
             log(.loadFailed(error))
             loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
             loadCompletion = nil
@@ -89,14 +78,12 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
         // All checks passed
         log(.loadSucceeded)
 
-        bannerSize = PartnerBannerSize(size: size, type: .fixed)
-        
         loadCompletion?(.success([:])) ?? log(.loadResultIgnored)
         loadCompletion = nil
 
         // View must be set to the same size as the ad
-        inlineView.frame = CGRect(origin: .zero, size: size)
-        banner.present(on: inlineView)
+        view.frame = CGRect(origin: .zero, size: loadedSize)
+        banner.present(on: view)
     }
 
     func bannerAdDidFailToLoad(_ banner: VungleBanner, withError: NSError) {

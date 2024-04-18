@@ -8,18 +8,10 @@ import Foundation
 import VungleAdsSDK
 
 /// Chartboost Mediation Vungle adapter fullscreen ad.
-final class VungleAdapterInterstitialAd: VungleAdapterAd, PartnerAd {
+final class VungleAdapterInterstitialAd: VungleAdapterAd, PartnerFullscreenAd {
 
     /// Holds a refernce to the Vungle ad between the time load() exits and the delegate is called
     private var ad: VungleInterstitial?
-    
-    /// The partner ad view to display inline. E.g. a banner view.
-    /// Should be nil for full-screen ads.
-    var inlineView: UIView? { nil }
-
-    /// The loaded partner ad banner size.
-    /// Should be `nil` for full-screen ads.
-    var bannerSize: PartnerBannerSize? { nil }
 
     /// Loads an ad.
     /// - parameter viewController: The view controller on which the ad will be presented on. Needed on load for some banners.
