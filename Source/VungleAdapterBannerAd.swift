@@ -67,7 +67,7 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
         }
 
         // Fail if inlineView container is unavailable. This should never happen since it is set on load.
-        guard let view else {
+        guard let view, let size else {
             let error = error(.loadFailureNoInlineView, description: "Vungle adapter inlineView is nil.")
             log(.loadFailed(error))
             loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
@@ -82,7 +82,7 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
         loadCompletion = nil
 
         // View must be set to the same size as the ad
-        view.frame = CGRect(origin: .zero, size: loadedSize)
+        view.frame = CGRect(origin: .zero, size: size.size)
         banner.present(on: view)
     }
 
