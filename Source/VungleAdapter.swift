@@ -10,8 +10,6 @@ import VungleAdsSDK
 /// The Chartboost Mediation Vungle adapter.
 final class VungleAdapter: PartnerAdapter {
 
-    private let COPPA_KEY = "com.chartboost.adapter.vungle.coppa"
-
     /// The version of the partner SDK.
     let partnerSDKVersion = VungleAds.sdkVersion
     
@@ -49,8 +47,8 @@ final class VungleAdapter: PartnerAdapter {
         
         // Apply saved COPPA setting before init, as suggested in documentation
         // https://support.vungle.com/hc/en-us/articles/360048572411#recommendations-for-using-vungle-s-coppa-compliance-tools-0-6
-        let savedCOPPASetting = UserDefaults.standard.bool(forKey: COPPA_KEY)
-        VunglePrivacySettings.setCOPPAStatus(savedCOPPASetting)
+        setIsUserUnderage(configuration.isUserUnderage)
+
         // Initialize Vungle
         VungleAds.initWithAppId(appID) { [weak self] initError in
             guard let self = self else { return }
@@ -75,37 +73,50 @@ final class VungleAdapter: PartnerAdapter {
         completion(.success(["bid_token": bidToken]))
     }
     
-    /// Indicates if GDPR applies or not and the user's GDPR consent status.
-    /// - parameter applies: `true` if GDPR applies, `false` if not, `nil` if the publisher has not provided this information.
-    /// - parameter status: One of the `GDPRConsentStatus` values depending on the user's preference.
-    func setGDPR(applies: Bool?, status: GDPRConsentStatus) {
+    /// Indicates that the user consent has changed.
+    /// - parameter consents: The new consents value, including both modified and unmodified consents.
+    /// - parameter modifiedKeys: A set containing all the keys that changed.
+    func setConsents(_ consents: [ConsentKey: ConsentValue], modifiedKeys: Set<ConsentKey>) {
+        // GDPR
         // See https://support.vungle.com/hc/en-us/articles/360048572411
-        if applies == true, status != .unknown {
-            let gdprStatus = status == .granted ? true : false
-            VunglePrivacySettings.setGDPRStatus(gdprStatus)
-            log(.privacyUpdated(setting: "GDPR Status", value: gdprStatus))
+        if modifiedKeys.contains(partnerID) || modifiedKeys.contains(ConsentKeys.gdprConsentGiven) {
+            let consent = consents[partnerID] ?? consents[ConsentKeys.gdprConsentGiven]
+            switch consent {
+            case ConsentValues.granted:
+                VunglePrivacySettings.setGDPRStatus(true)
+                log(.privacyUpdated(setting: "GDPR Status", value: true))
+            case ConsentValues.denied:
+                VunglePrivacySettings.setGDPRStatus(false)
+                log(.privacyUpdated(setting: "GDPR Status", value: false))
+            default:
+                break   // do nothing
+            }
+        }
+
+        // CCPA
+        // See https://support.vungle.com/hc/en-us/articles/360048572411
+        if modifiedKeys.contains(ConsentKeys.ccpaOptIn) {
+            switch consents[ConsentKeys.ccpaOptIn] {
+            case ConsentValues.granted:
+                VunglePrivacySettings.setCCPAStatus(true)
+                log(.privacyUpdated(setting: "CCPA Status", value: true))
+            case ConsentValues.denied:
+                VunglePrivacySettings.setCCPAStatus(false)
+                log(.privacyUpdated(setting: "CCPA Status", value: false))
+            default:
+                break   // do nothing
+            }
         }
     }
-    
-    /// Indicates the CCPA status both as a boolean and as an IAB US privacy string.
-    /// - parameter hasGivenConsent: A boolean indicating if the user has given consent.
-    /// - parameter privacyString: An IAB-compliant string indicating the CCPA status.
-    func setCCPA(hasGivenConsent: Bool, privacyString: String) {
+
+    /// Indicates that the user is underage signal has changed.
+    /// - parameter isUserUnderage: `true` if the user is underage as determined by the publisher, `false` otherwise.
+    func setIsUserUnderage(_ isUserUnderage: Bool) {
         // See https://support.vungle.com/hc/en-us/articles/360048572411
-        VunglePrivacySettings.setCCPAStatus(hasGivenConsent)
-        log(.privacyUpdated(setting: "CCPA Status", value: hasGivenConsent))
+        VunglePrivacySettings.setCOPPAStatus(isUserUnderage)
+        log(.privacyUpdated(setting: "COPPA Status", value: isUserUnderage))
     }
-    
-    /// Indicates if the user is subject to COPPA or not.
-    /// - parameter isChildDirected: `true` if the user is subject to COPPA, `false` otherwise.
-    func setCOPPA(isChildDirected: Bool) {
-        // See https://support.vungle.com/hc/en-us/articles/360048572411
-        VunglePrivacySettings.setCOPPAStatus(isChildDirected)
-        // Save new value so it can be applied prior to init
-        UserDefaults.standard.set(isChildDirected, forKey: COPPA_KEY)
-        log(.privacyUpdated(setting: "COPPA Status", value: isChildDirected))
-    }
-    
+
     /// Creates a new banner ad object in charge of communicating with a single partner SDK ad instance.
     /// Chartboost Mediation SDK calls this method to create a new ad for each new load request. Ad instances are never reused.
     /// Chartboost Mediation SDK takes care of storing and disposing of ad instances so you don't need to.
