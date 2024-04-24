@@ -45,6 +45,8 @@ final class VungleAdapter: PartnerAdapter {
             return
         }
         
+        // Apply initial consents
+        setConsents(configuration.consents, modifiedKeys: Set(configuration.consents.keys))
         // Apply saved COPPA setting before init, as suggested in documentation
         // https://support.vungle.com/hc/en-us/articles/360048572411#recommendations-for-using-vungle-s-coppa-compliance-tools-0-6
         setIsUserUnderage(configuration.isUserUnderage)
