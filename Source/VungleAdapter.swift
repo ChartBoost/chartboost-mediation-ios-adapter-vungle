@@ -89,7 +89,10 @@ final class VungleAdapter: PartnerAdapter {
     func setConsents(_ consents: [ConsentKey: ConsentValue], modifiedKeys: Set<ConsentKey>) {
         // GDPR
         // See https://support.vungle.com/hc/en-us/articles/360048572411
-        if modifiedKeys.contains(partnerID) || modifiedKeys.contains(ConsentKeys.gdprConsentGiven) {
+        // Ignore if the consent status has been directly set by publisher via the configuration class.
+        if !VungleAdapterConfiguration.isGDPRStatusOverriden
+            && (modifiedKeys.contains(partnerID) || modifiedKeys.contains(ConsentKeys.gdprConsentGiven))
+        {
             let consent = consents[partnerID] ?? consents[ConsentKeys.gdprConsentGiven]
             switch consent {
             case ConsentValues.granted:
@@ -105,7 +108,8 @@ final class VungleAdapter: PartnerAdapter {
 
         // CCPA
         // See https://support.vungle.com/hc/en-us/articles/360048572411
-        if modifiedKeys.contains(ConsentKeys.ccpaOptIn) {
+        // Ignore if the consent status has been directly set by publisher via the configuration class.
+        if !VungleAdapterConfiguration.isCCPAStatusOverriden && modifiedKeys.contains(ConsentKeys.ccpaOptIn) {
             switch consents[ConsentKeys.ccpaOptIn] {
             case ConsentValues.granted:
                 VunglePrivacySettings.setCCPAStatus(true)
