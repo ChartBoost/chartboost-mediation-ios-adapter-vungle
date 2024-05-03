@@ -9,28 +9,9 @@ import VungleAdsSDK
 
 /// The Chartboost Mediation Vungle adapter.
 final class VungleAdapter: PartnerAdapter {
-
-    /// The version of the partner SDK.
-    var partnerSDKVersion: String {
-        VungleAdapterConfiguration.partnerSDKVersion
-    }
-
-    /// The version of the adapter.
-    /// It should have either 5 or 6 digits separated by periods, where the first digit is Chartboost Mediation SDK's major version, the last digit is the adapter's build version, and intermediate digits are the partner SDK's version.
-    /// Format: `<Chartboost Mediation major version>.<Partner major version>.<Partner minor version>.<Partner patch version>.<Partner build version>.<Adapter build version>` where `.<Partner build version>` is optional.
-    var adapterVersion: String {
-        VungleAdapterConfiguration.adapterVersion
-    }
-
-    /// The partner's unique identifier.
-    var partnerID: String {
-        VungleAdapterConfiguration.partnerID
-    }
-
-    /// The human-friendly partner name.
-    var partnerDisplayName: String {
-        VungleAdapterConfiguration.partnerDisplayName
-    }
+    /// The adapter configuration type that contains adapter and partner info.
+    /// It may also be used to expose custom partner SDK options to the publisher.
+    var configuration: PartnerAdapterConfiguration.Type { VungleAdapterConfiguration.self }
 
     /// The designated initializer for the adapter.
     /// Chartboost Mediation SDK will use this constructor to create instances of conforming types.
@@ -91,9 +72,9 @@ final class VungleAdapter: PartnerAdapter {
         // See https://support.vungle.com/hc/en-us/articles/360048572411
         // Ignore if the consent status has been directly set by publisher via the configuration class.
         if !VungleAdapterConfiguration.isGDPRStatusOverriden
-            && (modifiedKeys.contains(partnerID) || modifiedKeys.contains(ConsentKeys.gdprConsentGiven))
+            && (modifiedKeys.contains(configuration.partnerID) || modifiedKeys.contains(ConsentKeys.gdprConsentGiven))
         {
-            let consent = consents[partnerID] ?? consents[ConsentKeys.gdprConsentGiven]
+            let consent = consents[configuration.partnerID] ?? consents[ConsentKeys.gdprConsentGiven]
             switch consent {
             case ConsentValues.granted:
                 VunglePrivacySettings.setGDPRStatus(true)

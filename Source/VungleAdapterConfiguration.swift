@@ -3,12 +3,12 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
+import ChartboostMediationSDK
 import Foundation
-import os.log
 import VungleAdsSDK
 
 /// A list of externally configurable properties pertaining to the partner SDK that can be retrieved and set by publishers.
-@objc public class VungleAdapterConfiguration: NSObject {
+@objc public class VungleAdapterConfiguration: NSObject, PartnerAdapterConfiguration {
 
     /// The version of the partner SDK.
     @objc public static var partnerSDKVersion: String {
@@ -31,7 +31,7 @@ import VungleAdsSDK
     @objc public static func setGDPRStatusOverride(_ status: Bool) {
         isGDPRStatusOverriden = true
         VunglePrivacySettings.setGDPRStatus(status)
-        os_log(.info, log: log, "Vungle SDK GDPR status override set to %{public}s", "\(status)")
+        log("GDPR status override set to \(status)")
     }
 
     /// Use to manually set the consent status on the Pangle SDK.
@@ -39,7 +39,7 @@ import VungleAdsSDK
     @objc public static func setCCPAStatusOverride(_ status: Bool) {
         isCCPAStatusOverriden = true
         VunglePrivacySettings.setCCPAStatus(status)
-        os_log(.info, log: log, "Vungle SDK CCPA status override set to %{public}s", "\(status)")
+        log("CCPA status override set to \(status)")
     }
 
     /// Internal flag that indicates if the GDPR status has been overriden by the publisher.
@@ -47,6 +47,4 @@ import VungleAdsSDK
 
     /// Internal flag that indicates if the CCPA status has been overriden by the publisher.
     static private(set) var isCCPAStatusOverriden = false
-
-    private static let log = OSLog(subsystem: "com.chartboost.mediation.adapter.vungle", category: "Configuration")
 }
