@@ -30,7 +30,11 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerBannerAd {
         loadCompletion = completion
 
         // Fail if we cannot fit a fixed size banner in the requested size.
-        guard let (loadedSize, vungleSize) = fixedBannerSize(for: request.bannerSize) else {
+        guard 
+            let requestedSize = request.bannerSize,
+            let loadedSize = BannerSize.largestStandardFixedSizeThatFits(in: requestedSize),
+            let vungleSize = loadedSize.vungleAdSize
+        else {
             let error = error(.loadFailureInvalidBannerSize)
             log(.loadFailed(error))
             return completion(.failure(error))
@@ -38,7 +42,7 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerBannerAd {
 
         let banner = VungleBanner(placementId: request.partnerPlacement, size: vungleSize)
         ad = banner
-        size = PartnerBannerSize(size: loadedSize, type: .fixed)
+        size = PartnerBannerSize(size: loadedSize.size, type: .fixed)
         banner.delegate = self
         // If the adm is nil, that's the same as telling it to load a non-programatic ad
         banner.load(request.adm)
@@ -129,30 +133,17 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
     }
 }
 
-// MARK: - Helpers
-extension VungleAdapterBannerAd {
-    private func fixedBannerSize(for requestedSize: ChartboostMediationSDK.BannerSize?) -> (size: CGSize, partnerSize: VungleAdsSDK.BannerSize)? {
-        // Return a default value if no size is specified.
-        guard let requestedSize else {
-            return (BannerSize.standard.size, .regular)
-        }
-        // If we can find a size that fits, return that.
-        if let size = BannerSize.largestStandardFixedSizeThatFits(in: requestedSize) {
-            switch size {
-            case .standard:
-                return (BannerSize.standard.size, .regular)
-            case .medium:
-                return (BannerSize.medium.size, .mrec)
-            case .leaderboard:
-                return (BannerSize.leaderboard.size, .leaderboard)
-            default:
-                // largestStandardFixedSizeThatFits currently only returns .standard, .medium, or .leaderboard,
-                // but if that changes then just default to .standard until this code gets updated.
-                return (BannerSize.standard.size, .regular)
-            }
-        } else {
-            // largestStandardFixedSizeThatFits has returned nil to indicate it couldn't find a fit.
-            return nil
+extension ChartboostMediationSDK.BannerSize {
+    fileprivate var vungleAdSize: VungleAdsSDK.BannerSize? {
+        switch self {
+        case .standard:
+            .regular
+        case .medium:
+            .mrec
+        case .leaderboard:
+            .leaderboard
+        default:
+            nil
         }
     }
 }
