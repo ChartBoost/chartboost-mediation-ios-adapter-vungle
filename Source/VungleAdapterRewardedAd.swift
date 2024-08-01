@@ -8,19 +8,14 @@ import Foundation
 import VungleAdsSDK
 
 /// Chartboost Mediation Vungle adapter fullscreen ad.
-final class VungleAdapterRewardedAd: VungleAdapterAd, PartnerAd {
-
+final class VungleAdapterRewardedAd: VungleAdapterAd, PartnerFullscreenAd {
     /// Holds a refernce to the Vungle ad between the time load() exits and the delegate is called
     private var ad: VungleRewarded?
-
-    /// The partner ad view to display inline. E.g. a banner view.
-    /// Should be nil for full-screen ads.
-    var inlineView: UIView? { nil }
 
     /// Loads an ad.
     /// - parameter viewController: The view controller on which the ad will be presented on. Needed on load for some banners.
     /// - parameter completion: Closure to be performed once the ad has been loaded.
-    func load(with viewController: UIViewController?, completion: @escaping (Result<PartnerEventDetails, Error>) -> Void) {
+    func load(with viewController: UIViewController?, completion: @escaping (Error?) -> Void) {
         log(.loadStarted)
 
         loadCompletion = completion
@@ -33,16 +28,16 @@ final class VungleAdapterRewardedAd: VungleAdapterAd, PartnerAd {
     }
 
     /// Shows a loaded ad.
-    /// It will never get called for banner ads. You may leave the implementation blank for that ad format.
+    /// Chartboost Mediation SDK will always call this method from the main thread.
     /// - parameter viewController: The view controller on which the ad will be presented on.
     /// - parameter completion: Closure to be performed once the ad has been shown.
-    func show(with viewController: UIViewController, completion: @escaping (Result<PartnerEventDetails, Error>) -> Void) {
+    func show(with viewController: UIViewController, completion: @escaping (Error?) -> Void) {
         log(.showStarted)
 
         guard let ad = self.ad else {
             let error = error(.showFailureAdNotFound)
             log(.showFailed(error))
-            completion(.failure(error))
+            completion(error)
             return
         }
 
@@ -52,7 +47,7 @@ final class VungleAdapterRewardedAd: VungleAdapterAd, PartnerAd {
         } else {
             let error = error(.showFailureAdNotReady)
             log(.showFailed(error))
-            completion(.failure(error))
+            completion(error)
         }
     }
 }
@@ -62,13 +57,13 @@ extension VungleAdapterRewardedAd: VungleRewardedDelegate {
     // Ad load events
     func rewardedAdDidLoad(_ rewarded: VungleRewarded) {
         log(.loadSucceeded)
-        loadCompletion?(.success([:])) ?? log(.loadResultIgnored)
+        loadCompletion?(nil) ?? log(.loadResultIgnored)
         loadCompletion = nil
     }
 
     func rewardedAdDidFailToLoad(_ rewarded: VungleRewarded, withError: NSError) {
         log(.loadFailed(withError))
-        loadCompletion?(.failure(withError)) ?? log(.loadResultIgnored)
+        loadCompletion?(withError) ?? log(.loadResultIgnored)
         loadCompletion = nil
     }
 
@@ -79,24 +74,24 @@ extension VungleAdapterRewardedAd: VungleRewardedDelegate {
 
     func rewardedAdDidPresent(_ rewarded: VungleRewarded) {
         log(.showSucceeded)
-        showCompletion?(.success([:])) ?? log(.showResultIgnored)
+        showCompletion?(nil) ?? log(.showResultIgnored)
         showCompletion = nil
     }
 
     func rewardedAdDidFailToPresent(_ rewarded: VungleRewarded, withError: NSError) {
         log(.showFailed(withError))
-        showCompletion?(.failure(withError)) ?? log(.showResultIgnored)
+        showCompletion?(withError) ?? log(.showResultIgnored)
         showCompletion = nil
     }
 
     func rewardedAdDidTrackImpression(_ rewarded: VungleRewarded) {
         log(.didTrackImpression)
-        delegate?.didTrackImpression(self, details: [:]) ?? log(.delegateUnavailable)
+        delegate?.didTrackImpression(self) ?? log(.delegateUnavailable)
     }
 
     func rewardedAdDidClick(_ rewarded: VungleRewarded) {
         log(.didClick(error: nil))
-        delegate?.didClick(self, details: [:])  ?? log(.delegateUnavailable)
+        delegate?.didClick(self) ?? log(.delegateUnavailable)
     }
 
     func rewardedAdWillLeaveApplication(_ rewarded: VungleRewarded) {
@@ -105,7 +100,7 @@ extension VungleAdapterRewardedAd: VungleRewardedDelegate {
 
     func rewardedAdDidRewardUser(_ rewarded: VungleRewarded) {
         log(.didReward)
-        delegate?.didReward(self, details: [:]) ?? log(.delegateUnavailable)
+        delegate?.didReward(self) ?? log(.delegateUnavailable)
     }
 
     func rewardedAdWillClose(_ rewarded: VungleRewarded) {
@@ -114,6 +109,6 @@ extension VungleAdapterRewardedAd: VungleRewardedDelegate {
 
     func rewardedAdDidClose(_ rewarded: VungleRewarded) {
         log(.didDismiss(error: nil))
-        delegate?.didDismiss(self, details: [:], error: nil) ?? log(.delegateUnavailable)
+        delegate?.didDismiss(self, error: nil) ?? log(.delegateUnavailable)
     }
 }

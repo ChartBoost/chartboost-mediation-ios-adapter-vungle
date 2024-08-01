@@ -8,14 +8,15 @@ import Foundation
 import VungleAdsSDK
 
 /// Chartboost Mediation Vungle adapter banner ad.
-final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
-
+final class VungleAdapterBannerAd: VungleAdapterAd, PartnerBannerAd {
     /// Holds a refernce to the Vungle ad between the time load() exits and the delegate is called
     private var ad: VungleBanner?
 
-    /// The partner ad view to display inline. E.g. a banner view.
-    /// Should be nil for full-screen ads.
-    var inlineView: UIView? = UIView()
+    /// The partner banner ad view to display.
+    var view: UIView? = UIView()
+
+    /// The loaded partner ad banner size.
+    var size: PartnerBannerSize?
 
     /// Indicates if the Vungle banner was displayed with a successful call to Vungle SDK's `addAdView`.
     private var adWasDisplayed = false
@@ -23,61 +24,56 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerAd {
     /// Loads an ad.
     /// - parameter viewController: The view controller on which the ad will be presented on. Needed on load for some banners.
     /// - parameter completion: Closure to be performed once the ad has been loaded.
-    func load(with viewController: UIViewController?, completion: @escaping (Result<PartnerEventDetails, Error>) -> Void) {
+    func load(with viewController: UIViewController?, completion: @escaping (Error?) -> Void) {
         log(.loadStarted)
         loadCompletion = completion
 
         // Fail if we cannot fit a fixed size banner in the requested size.
-        guard let (_, vungleSize) = fixedBannerSize(for: request.size ?? IABStandardAdSize) else {
+        guard
+            let requestedSize = request.bannerSize,
+            let loadedSize = BannerSize.largestStandardFixedSizeThatFits(in: requestedSize),
+            let vungleSize = loadedSize.vungleAdSize
+        else {
             let error = error(.loadFailureInvalidBannerSize)
             log(.loadFailed(error))
-            return completion(.failure(error))
+            completion(error)
+            return
         }
 
         let banner = VungleBanner(placementId: request.partnerPlacement, size: vungleSize)
         ad = banner
+        size = PartnerBannerSize(size: loadedSize.size, type: .fixed)
         banner.delegate = self
         // If the adm is nil, that's the same as telling it to load a non-programatic ad
         banner.load(request.adm)
     }
 
     /// Shows a loaded ad.
-    /// It will never get called for banner ads. You may leave the implementation blank for that ad format.
+    /// Chartboost Mediation SDK will always call this method from the main thread.
     /// - parameter viewController: The view controller on which the ad will be presented on.
     /// - parameter completion: Closure to be performed once the ad has been shown.
-    func show(with viewController: UIViewController, completion: @escaping (Result<PartnerEventDetails, Error>) -> Void) {
-        /// NO-OP
+    func show(with viewController: UIViewController, completion: @escaping (Error?) -> Void) {
+        // NO-OP
     }
 }
 
 // MARK: - VungleBannerDelegate
 extension VungleAdapterBannerAd: VungleBannerDelegate {
     func bannerAdDidLoad(_ banner: VungleBanner) {
-
         // Check that the ad is ready
         guard banner.canPlayAd() == true else {
             let error = error(.loadFailureUnknown, description: "Unable to play ad.")
             log(.loadFailed(error))
-            loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
+            loadCompletion?(error) ?? log(.loadResultIgnored)
             loadCompletion = nil
             return
         }
 
-        // Fail if inlineView container is unavailable. This should never happen since it is set on load.
-        guard let inlineView = inlineView else {
-            let error = error(.loadFailureNoInlineView, description: "Vungle adapter inlineView is nil.")
+        // Fail if the banner container is unavailable. This should never happen since it is set on load.
+        guard let view, let size else {
+            let error = error(.loadFailureNoBannerView, description: "Vungle adapter bannerView is nil.")
             log(.loadFailed(error))
-            loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
-            loadCompletion = nil
-            return
-        }
-
-        // Fail if ad size is missing from request. This should never happen.
-        guard let requestSize = request.size,
-              let (size, _) = fixedBannerSize(for: requestSize) else {
-            let error = error(.loadFailureInvalidAdRequest, description: "No size was specified.")
-            log(.loadFailed(error))
-            loadCompletion?(.failure(error)) ?? log(.loadResultIgnored)
+            loadCompletion?(error) ?? log(.loadResultIgnored)
             loadCompletion = nil
             return
         }
@@ -85,22 +81,17 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
         // All checks passed
         log(.loadSucceeded)
 
-        let partnerDetails = [
-            "bannerWidth": "\(size.width)",
-            "bannerHeight": "\(size.height)",
-            "bannerType": "0" // Fixed banner
-        ]
-        loadCompletion?(.success(partnerDetails)) ?? log(.loadResultIgnored)
+        loadCompletion?(nil) ?? log(.loadResultIgnored)
         loadCompletion = nil
 
         // View must be set to the same size as the ad
-        inlineView.frame = CGRect(origin: .zero, size: size)
-        banner.present(on: inlineView)
+        view.frame = CGRect(origin: .zero, size: size.size)
+        banner.present(on: view)
     }
 
     func bannerAdDidFailToLoad(_ banner: VungleBanner, withError: NSError) {
         log(.loadFailed(withError))
-        loadCompletion?(.failure(withError)) ?? log(.loadResultIgnored)
+        loadCompletion?(withError) ?? log(.loadResultIgnored)
         loadCompletion = nil
     }
 
@@ -119,12 +110,12 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
 
     func bannerAdDidTrackImpression(_ banner: VungleBanner) {
         log(.didTrackImpression)
-        delegate?.didTrackImpression(self, details: [:]) ?? log(.delegateUnavailable)
+        delegate?.didTrackImpression(self) ?? log(.delegateUnavailable)
     }
 
     func bannerAdDidClick(_ banner: VungleBanner) {
         log(.didClick(error: nil))
-        delegate?.didClick(self, details: [:])  ?? log(.delegateUnavailable)
+        delegate?.didClick(self) ?? log(.delegateUnavailable)
     }
 
     func bannerAdWillLeaveApplication(_ banner: VungleBanner) {
@@ -137,27 +128,21 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
 
     func bannerAdDidClose(_ banner: VungleBanner) {
         log(.didDismiss(error: nil))
-        delegate?.didDismiss(self, details: [:], error: nil) ?? log(.delegateUnavailable)
+        delegate?.didDismiss(self, error: nil) ?? log(.delegateUnavailable)
     }
 }
 
-// MARK: - Helpers
-extension VungleAdapterBannerAd {
-    private func fixedBannerSize(for requestedSize: CGSize) -> (size: CGSize, partnerSize: VungleAdsSDK.BannerSize)? {
-        let sizes: [(size: CGSize, partnerSize: VungleAdsSDK.BannerSize)] = [
-            (size: IABLeaderboardAdSize, partnerSize: .leaderboard),
-            (size: IABMediumAdSize, partnerSize: .mrec),
-            (size: IABStandardAdSize, partnerSize: .regular)
-        ]
-        // Find the largest size that can fit in the requested size.
-        for (size, partnerSize) in sizes {
-            // If height is 0, the pub has requested an ad of any height, so only the width matters.
-            if requestedSize.width >= size.width &&
-                (size.height == 0 || requestedSize.height >= size.height) {
-                return (size, partnerSize)
-            }
+extension ChartboostMediationSDK.BannerSize {
+    fileprivate var vungleAdSize: VungleAdsSDK.BannerSize? {
+        switch self {
+        case .standard:
+            .regular
+        case .medium:
+            .mrec
+        case .leaderboard:
+            .leaderboard
+        default:
+            nil
         }
-        // The requested size cannot fit any fixed size banners.
-        return nil
     }
 }

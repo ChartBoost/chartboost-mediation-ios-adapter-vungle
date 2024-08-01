@@ -8,21 +8,16 @@ import Foundation
 import VungleAdsSDK
 
 /// Chartboost Mediation Vungle adapter fullscreen ad.
-final class VungleAdapterInterstitialAd: VungleAdapterAd, PartnerAd {
-
+final class VungleAdapterInterstitialAd: VungleAdapterAd, PartnerFullscreenAd {
     /// Holds a refernce to the Vungle ad between the time load() exits and the delegate is called
     private var ad: VungleInterstitial?
-    
-    /// The partner ad view to display inline. E.g. a banner view.
-    /// Should be nil for full-screen ads.
-    var inlineView: UIView? { nil }
-        
+
     /// Loads an ad.
     /// - parameter viewController: The view controller on which the ad will be presented on. Needed on load for some banners.
     /// - parameter completion: Closure to be performed once the ad has been loaded.
-    func load(with viewController: UIViewController?, completion: @escaping (Result<PartnerEventDetails, Error>) -> Void) {
+    func load(with viewController: UIViewController?, completion: @escaping (Error?) -> Void) {
         log(.loadStarted)
-        
+
         loadCompletion = completion
 
         let interstitial = VungleInterstitial(placementId: request.partnerPlacement)
@@ -31,18 +26,18 @@ final class VungleAdapterInterstitialAd: VungleAdapterAd, PartnerAd {
         // If the adm is nil, that's the same as telling it to load a non-programatic ad
         interstitial.load(request.adm)
     }
-    
+
     /// Shows a loaded ad.
-    /// It will never get called for banner ads. You may leave the implementation blank for that ad format.
+    /// Chartboost Mediation SDK will always call this method from the main thread.
     /// - parameter viewController: The view controller on which the ad will be presented on.
     /// - parameter completion: Closure to be performed once the ad has been shown.
-    func show(with viewController: UIViewController, completion: @escaping (Result<PartnerEventDetails, Error>) -> Void) {
+    func show(with viewController: UIViewController, completion: @escaping (Error?) -> Void) {
         log(.showStarted)
 
         guard let ad = self.ad else {
             let error = error(.showFailureAdNotFound)
             log(.showFailed(error))
-            completion(.failure(error))
+            completion(error)
             return
         }
 
@@ -52,7 +47,7 @@ final class VungleAdapterInterstitialAd: VungleAdapterAd, PartnerAd {
         } else {
             let error = error(.showFailureAdNotReady)
             log(.showFailed(error))
-            completion(.failure(error))
+            completion(error)
         }
     }
 }
@@ -62,13 +57,13 @@ extension VungleAdapterInterstitialAd: VungleInterstitialDelegate {
     // Ad load events
     func interstitialAdDidLoad(_ interstitial: VungleInterstitial) {
         log(.loadSucceeded)
-        loadCompletion?(.success([:])) ?? log(.loadResultIgnored)
+        loadCompletion?(nil) ?? log(.loadResultIgnored)
         loadCompletion = nil
     }
 
     func interstitialAdDidFailToLoad(_ interstitial: VungleInterstitial, withError: NSError) {
         log(.loadFailed(withError))
-        loadCompletion?(.failure(withError)) ?? log(.loadResultIgnored)
+        loadCompletion?(withError) ?? log(.loadResultIgnored)
         loadCompletion = nil
     }
 
@@ -79,24 +74,24 @@ extension VungleAdapterInterstitialAd: VungleInterstitialDelegate {
 
     func interstitialAdDidPresent(_ interstitial: VungleInterstitial) {
         log(.showSucceeded)
-        showCompletion?(.success([:])) ?? log(.showResultIgnored)
+        showCompletion?(nil) ?? log(.showResultIgnored)
         showCompletion = nil
     }
 
     func interstitialAdDidFailToPresent(_ interstitial: VungleInterstitial, withError: NSError) {
         log(.showFailed(withError))
-        showCompletion?(.failure(withError)) ?? log(.showResultIgnored)
+        showCompletion?(withError) ?? log(.showResultIgnored)
         showCompletion = nil
     }
 
     func interstitialAdDidTrackImpression(_ interstitial: VungleInterstitial) {
         log(.didTrackImpression)
-        delegate?.didTrackImpression(self, details: [:]) ?? log(.delegateUnavailable)
+        delegate?.didTrackImpression(self) ?? log(.delegateUnavailable)
     }
 
     func interstitialAdDidClick(_ interstitial: VungleInterstitial) {
         log(.didClick(error: nil))
-        delegate?.didClick(self, details: [:])  ?? log(.delegateUnavailable)
+        delegate?.didClick(self) ?? log(.delegateUnavailable)
     }
 
     func interstitialAdWillLeaveApplication(_ interstitial: VungleInterstitial) {
@@ -109,6 +104,6 @@ extension VungleAdapterInterstitialAd: VungleInterstitialDelegate {
 
     func interstitialAdDidClose(_ interstitial: VungleInterstitial) {
         log(.didDismiss(error: nil))
-        delegate?.didDismiss(self, details: [:], error: nil) ?? log(.delegateUnavailable)
+        delegate?.didDismiss(self, error: nil) ?? log(.delegateUnavailable)
     }
 }
