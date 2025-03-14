@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Chartboost, Inc.
+// Copyright 2022-2025 Chartboost, Inc.
 //
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
@@ -73,8 +73,7 @@ final class VungleAdapter: PartnerAdapter {
         // See https://support.vungle.com/hc/en-us/articles/360048572411
         // Ignore if the consent status has been directly set by publisher via the configuration class.
         if !VungleAdapterConfiguration.isGDPRStatusOverridden
-            && (modifiedKeys.contains(configuration.partnerID) || modifiedKeys.contains(ConsentKeys.gdprConsentGiven))
-        {
+            && (modifiedKeys.contains(configuration.partnerID) || modifiedKeys.contains(ConsentKeys.gdprConsentGiven)) {
             let consent = consents[configuration.partnerID] ?? consents[ConsentKeys.gdprConsentGiven]
             switch consent {
             case ConsentValues.granted:

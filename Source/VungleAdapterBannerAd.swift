@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Chartboost, Inc.
+// Copyright 2022-2025 Chartboost, Inc.
 //
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
@@ -9,17 +9,11 @@ import VungleAdsSDK
 
 /// Chartboost Mediation Vungle adapter banner ad.
 final class VungleAdapterBannerAd: VungleAdapterAd, PartnerBannerAd {
-    /// Holds a refernce to the Vungle ad between the time load() exits and the delegate is called
-    private var ad: VungleBanner?
-
     /// The partner banner ad view to display.
-    var view: UIView? = UIView()
+    var view: UIView?
 
     /// The loaded partner ad banner size.
     var size: PartnerBannerSize?
-
-    /// Indicates if the Vungle banner was displayed with a successful call to Vungle SDK's `addAdView`.
-    private var adWasDisplayed = false
 
     /// Loads an ad.
     /// - parameter viewController: The view controller on which the ad will be presented on. Needed on load for some banners.
@@ -40,12 +34,13 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerBannerAd {
             return
         }
 
-        let banner = VungleBanner(placementId: request.partnerPlacement, size: vungleSize)
-        ad = banner
+        let bannerView = VungleBannerView(placementId: request.partnerPlacement, vungleAdSize: vungleSize)
+        bannerView.delegate = self
+        view = bannerView
+
         size = PartnerBannerSize(size: loadedSize.size, type: .fixed)
-        banner.delegate = self
         // If the adm is nil, that's the same as telling it to load a non-programatic ad
-        banner.load(request.adm)
+        bannerView.load(request.adm)
     }
 
     /// Shows a loaded ad.
@@ -58,19 +53,10 @@ final class VungleAdapterBannerAd: VungleAdapterAd, PartnerBannerAd {
 }
 
 // MARK: - VungleBannerDelegate
-extension VungleAdapterBannerAd: VungleBannerDelegate {
-    func bannerAdDidLoad(_ banner: VungleBanner) {
-        // Check that the ad is ready
-        guard banner.canPlayAd() == true else {
-            let error = error(.loadFailureUnknown, description: "Unable to play ad.")
-            log(.loadFailed(error))
-            loadCompletion?(error) ?? log(.loadResultIgnored)
-            loadCompletion = nil
-            return
-        }
-
+extension VungleAdapterBannerAd: VungleBannerViewDelegate {
+    func bannerAdDidLoad(_ bannerView: VungleBannerView) {
         // Fail if the banner container is unavailable. This should never happen since it is set on load.
-        guard let view, let size else {
+        if view == nil || size == nil {
             let error = error(.loadFailureNoBannerView, description: "Vungle adapter bannerView is nil.")
             log(.loadFailed(error))
             loadCompletion?(error) ?? log(.loadResultIgnored)
@@ -80,67 +66,62 @@ extension VungleAdapterBannerAd: VungleBannerDelegate {
 
         // All checks passed
         log(.loadSucceeded)
-
         loadCompletion?(nil) ?? log(.loadResultIgnored)
         loadCompletion = nil
-
-        // View must be set to the same size as the ad
-        view.frame = CGRect(origin: .zero, size: size.size)
-        banner.present(on: view)
     }
 
-    func bannerAdDidFailToLoad(_ banner: VungleBanner, withError: NSError) {
+    func bannerAdDidFail(_ bannerView: VungleBannerView, withError: NSError) {
         log(.loadFailed(withError))
         loadCompletion?(withError) ?? log(.loadResultIgnored)
         loadCompletion = nil
     }
 
     // Ad Lifecycle Events
-    func bannerAdWillPresent(_ banner: VungleBanner) {
+    func bannerAdWillPresent(_ banner: VungleBannerView) {
         log(.showStarted)
     }
 
-    func bannerAdDidPresent(_ banner: VungleBanner) {
+    func bannerAdDidPresent(_ banner: VungleBannerView) {
         log(.showSucceeded)
     }
 
-    func bannerAdDidFailToPresent(_ banner: VungleBanner, withError: NSError) {
+    func bannerAdDidFailToPresent(_ banner: VungleBannerView, withError: NSError) {
         log(.showFailed(withError))
     }
 
-    func bannerAdDidTrackImpression(_ banner: VungleBanner) {
+    func bannerAdDidTrackImpression(_ banner: VungleBannerView) {
         log(.didTrackImpression)
         delegate?.didTrackImpression(self) ?? log(.delegateUnavailable)
     }
 
-    func bannerAdDidClick(_ banner: VungleBanner) {
+    func bannerAdDidClick(_ banner: VungleBannerView) {
         log(.didClick(error: nil))
         delegate?.didClick(self) ?? log(.delegateUnavailable)
     }
 
-    func bannerAdWillLeaveApplication(_ banner: VungleBanner) {
+    func bannerAdWillLeaveApplication(_ banner: VungleBannerView) {
         log(.delegateCallIgnored)
     }
 
-    func bannerAdWillClose(_ banner: VungleBanner) {
+    func bannerAdWillClose(_ banner: VungleBannerView) {
         log(.delegateCallIgnored)
     }
 
-    func bannerAdDidClose(_ banner: VungleBanner) {
+    func bannerAdDidClose(_ banner: VungleBannerView) {
         log(.didDismiss(error: nil))
         delegate?.didDismiss(self, error: nil) ?? log(.delegateUnavailable)
     }
 }
 
 extension ChartboostMediationSDK.BannerSize {
-    fileprivate var vungleAdSize: VungleAdsSDK.BannerSize? {
+    fileprivate var vungleAdSize: VungleAdsSDK.VungleAdSize? {
         switch self {
         case .standard:
-            .regular
+            .VungleAdSizeBannerRegular
         case .medium:
-            .mrec
+            .VungleAdSizeMREC
         case .leaderboard:
-            .leaderboard
+            .VungleAdSizeLeaderboard
         default:
             nil
         }
