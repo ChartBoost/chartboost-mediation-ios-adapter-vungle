@@ -5,6 +5,7 @@
 
 import ChartboostMediationSDK
 import Foundation
+import UIKit
 import VungleAdsSDK
 
 /// Chartboost Mediation Vungle adapter fullscreen ad.
